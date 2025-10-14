@@ -26,7 +26,7 @@ async def get_users(
     users = await user_controller.get_all()
 
     assert_access(resource=users)
-    return [UserResponse.from_orm(user) for user in users]
+    return [UserResponse.model_validate(user) for user in users]
 
 
 @user_router.post("/", status_code=201)
@@ -39,7 +39,7 @@ async def register_user(
         password=register_user_request.password,
         username=register_user_request.username,
     )
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 
 @user_router.post("/login")
@@ -56,7 +56,7 @@ async def login_user(
 def get_user(
     user: User = Depends(get_current_user),
 ) -> UserResponse:
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 
 @user_router.post("/oauth/{provider}")

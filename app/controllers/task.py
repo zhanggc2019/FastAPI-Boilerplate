@@ -49,7 +49,4 @@ class TaskController(BaseController[Task]):
         :return: The task.
         """
 
-        task = await self.task_repository.get_by_id(task_id)
-        task.is_completed = True
-
-        return task
+        return await self.task_repository.set_completed(task_id, True)

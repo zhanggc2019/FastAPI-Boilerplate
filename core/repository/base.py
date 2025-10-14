@@ -1,9 +1,10 @@
 from functools import reduce
 from typing import Any, Generic, Type, TypeVar
 
-from sqlalchemy import Select, func
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import select
+from sqlalchemy import Select
 
 from core.database import Base
 
@@ -17,7 +18,7 @@ class BaseRepository(Generic[ModelType]):
         self.session = db_session
         self.model_class: Type[ModelType] = model
 
-    async def create(self, attributes: dict[str, Any] = None) -> ModelType:
+    async def create(self, attributes: dict[str, Any] | None = None) -> ModelType:
         """
         Creates the model instance.
 
@@ -45,7 +46,7 @@ class BaseRepository(Generic[ModelType]):
         query = query.offset(skip).limit(limit)
 
         if join_ is not None:
-            return await self.all_unique(query)
+            return await self._all_unique(query)
             
         return await self._all(query)
 
@@ -68,11 +69,11 @@ class BaseRepository(Generic[ModelType]):
         query = await self._get_by(query, field, value)
 
         if join_ is not None:
-            return await self.all_unique(query)
+            return await self._all_unique(query)  # type: ignore
         if unique:
             return await self._one(query)
 
-        return await self._all(query)
+        return await self._all(query)  # type: ignore
 
     async def delete(self, model: ModelType) -> None:
         """
@@ -81,7 +82,7 @@ class BaseRepository(Generic[ModelType]):
         :param model: The model to delete.
         :return: None
         """
-        self.session.delete(model)
+        await self.session.delete(model)
 
     def _query(
         self,
@@ -108,12 +109,12 @@ class BaseRepository(Generic[ModelType]):
         :param query: The query to execute.
         :return: A list of model instances.
         """
-        query = await self.session.scalars(query)
-        return query.all()
+        result = await self.session.scalars(query)
+        return list(result.all())
 
     async def _all_unique(self, query: Select) -> list[ModelType]:
         result = await self.session.execute(query)
-        return result.unique().scalars().all()
+        return list(result.unique().scalars().all())
 
     async def _first(self, query: Select) -> ModelType | None:
         """
@@ -122,13 +123,13 @@ class BaseRepository(Generic[ModelType]):
         :param query: The query to execute.
         :return: The first model instance.
         """
-        query = await self.session.scalars(query)
-        return query.first()
+        result = await self.session.scalars(query)
+        return result.first()
 
     async def _one_or_none(self, query: Select) -> ModelType | None:
         """Returns the first result from the query or None."""
-        query = await self.session.scalars(query)
-        return query.one_or_none()
+        result = await self.session.scalars(query)
+        return result.one_or_none()
 
     async def _one(self, query: Select) -> ModelType:
         """
@@ -137,8 +138,8 @@ class BaseRepository(Generic[ModelType]):
         :param query: The query to execute.
         :return: The first model instance.
         """
-        query = await self.session.scalars(query)
-        return query.one()
+        result = await self.session.scalars(query)
+        return result.one()
 
     async def _count(self, query: Select) -> int:
         """
@@ -146,9 +147,10 @@ class BaseRepository(Generic[ModelType]):
 
         :param query: The query to execute.
         """
-        query = query.subquery()
-        query = await self.session.scalars(select(func.count()).select_from(query))
-        return query.one()
+        subquery = query.subquery()
+        stmt = select(func.count()).select_from(subquery)
+        result = await self.session.scalars(stmt)
+        return result.one()
 
     async def _sort_by(
         self,
@@ -207,7 +209,7 @@ class BaseRepository(Generic[ModelType]):
         if not isinstance(join_, set):
             raise TypeError("join_ must be a set")
 
-        return reduce(self._add_join_to_query, join_, query)
+        return reduce(self._add_join_to_query, list(join_), query)
 
     def _maybe_ordered(self, query: Select, order_: dict | None = None) -> Select:
         """
@@ -227,7 +229,7 @@ class BaseRepository(Generic[ModelType]):
 
         return query
 
-    def _add_join_to_query(self, query: Select, join_: set[str]) -> Select:
+    def _add_join_to_query(self, query: Select, join_: str) -> Select:
         """
         Returns the query with the given join.
 

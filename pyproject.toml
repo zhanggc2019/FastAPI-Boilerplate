@@ -57,3 +57,27 @@ default = true
 [build-system]
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# Pyright 配置
+[tool.pyright]
+# 关闭类型检查
+typeCheckingMode = "off"
+
+# Ruff 常用检验规则
+[tool.ruff]
+# 行长度限制
+line-length = 120
+# 目标 Python 版本
+target-version = "py311"
+# 保存时自动修复
+fix = true
+# 自动修复不安全的修复
+unsafe-fixes = true
+
+# 格式化设置
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+docstring-code-format = true

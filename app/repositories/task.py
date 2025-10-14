@@ -20,11 +20,11 @@ class TaskRepository(BaseRepository[Task]):
         :param join_: The joins to make.
         :return: A list of tasks.
         """
-        query = await self._query(join_)
+        query = self._query(join_)
         query = await self._get_by(query, "task_author_id", author_id)
 
         if join_ is not None:
-            return await self.all_unique(query)
+            return await self._all_unique(query)
 
         return await self._all(query)
 
@@ -36,3 +36,15 @@ class TaskRepository(BaseRepository[Task]):
         :return: The joined query.
         """
         return query.options(joinedload(Task.author))
+
+    async def set_completed(self, task_id: int, completed: bool = True) -> Task:
+        """
+        Set the completed status of a task.
+
+        :param task_id: The task id to update.
+        :param completed: The completion status.
+        :return: The updated task.
+        """
+        task = await self.get_by("id", task_id)
+        setattr(task, 'is_completed', completed)
+        return task

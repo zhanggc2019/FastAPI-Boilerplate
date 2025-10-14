@@ -1,4 +1,5 @@
 from typing import Callable
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 
@@ -16,12 +17,12 @@ task_router = APIRouter()
 async def get_tasks(
     request: Request,
     task_controller: TaskController = Depends(Factory().get_task_controller),
-    assert_access: Callable = Depends(Permissions(TaskPermission.READ)),
+    assert_access: Callable = Depends(Permissions(str(TaskPermission.READ))),
 ) -> list[TaskResponse]:
     tasks = await task_controller.get_by_author_id(request.user.id)
 
     assert_access(tasks)
-    return tasks
+    return [TaskResponse.model_validate(task) for task in tasks]
 
 
 @task_router.post("/", response_model=TaskResponse, status_code=201)
@@ -35,16 +36,16 @@ async def create_task(
         description=task_create.description,
         author_id=request.user.id,
     )
-    return task
+    return TaskResponse.model_validate(task)
 
 
 @task_router.get("/{task_uuid}", response_model=TaskResponse)
 async def get_task(
     task_uuid: str,
     task_controller: TaskController = Depends(Factory().get_task_controller),
-    assert_access: Callable = Depends(Permissions(TaskPermission.READ)),
+    assert_access: Callable = Depends(Permissions(str(TaskPermission.READ))),
 ) -> TaskResponse:
-    task = await task_controller.get_by_uuid(task_uuid)
+    task = await task_controller.get_by_uuid(UUID(task_uuid))
 
     assert_access(task)
-    return task
+    return TaskResponse.model_validate(task)
