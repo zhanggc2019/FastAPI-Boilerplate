@@ -1,3 +1,4 @@
+from asyncio import create_task
 from typing import List
 
 from fastapi import Depends, FastAPI, Request
@@ -16,6 +17,7 @@ from core.fastapi.middlewares import (
     ResponseLoggerMiddleware,
     SQLAlchemyMiddleware,
 )
+from core.log import set_custom_logfile, setup_logging
 
 
 def on_auth_error(request: Request, exc: Exception):
@@ -67,6 +69,10 @@ def make_middleware() -> List[Middleware]:
 def init_cache() -> None:
     Cache.init(backend=RedisBackend(), key_maker=CustomKeyMaker())
 
+def register_logger() -> None:
+    """注册日志"""
+    setup_logging()
+    set_custom_logfile()
 
 def create_app() -> FastAPI:
     app_ = FastAPI(
@@ -78,6 +84,7 @@ def create_app() -> FastAPI:
         dependencies=[Depends(Logging)],
         middleware=make_middleware(),
     )
+    register_logger()
     init_routers(app_=app_)
     init_listeners(app_=app_)
     init_cache()

@@ -4,6 +4,11 @@ from pydantic_settings import BaseSettings
 from pydantic import PostgresDsn, RedisDsn, Field
 from pydantic_settings import SettingsConfigDict
 
+from pathlib import Path
+
+# 项目根目录
+BASE_PATH = Path(__file__).resolve().parent.parent
+
 
 class EnvironmentType(str, Enum):
     DEVELOPMENT = "development"
@@ -18,6 +23,25 @@ class Config(BaseSettings):
         case_sensitive=False,
         extra="ignore"
     )
+
+    # 日志文件路径
+    LOG_DIR = BASE_PATH / 'log'
+    LOG_STD_LEVEL = "INFO"
+    TRACE_ID_REQUEST_HEADER_KEY: str = 'X-Request-ID'
+    TRACE_ID_LOG_LENGTH: int = 32  # UUID 长度，必须小于等于 32
+    TRACE_ID_LOG_DEFAULT_VALUE: str = '-'
+     # 日志（文件）
+    LOG_FILE_ACCESS_LEVEL: str = 'INFO'
+    LOG_FILE_ERROR_LEVEL: str = 'ERROR'
+    LOG_ACCESS_FILENAME: str = 'access.log'
+    LOG_ERROR_FILENAME: str = 'error.log'
+     # 日志
+    LOG_FORMAT: str = (
+        '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> | <lvl>{level: <8}</> | <cyan>{correlation_id}</> | <lvl>{message}</>'
+    )
+
+    # 静态资源目录
+    STATIC_DIR = BASE_PATH / 'static'
     
     DEBUG: int = 0
     DEFAULT_LOCALE: str = "zh_CN"
