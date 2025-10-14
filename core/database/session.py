@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_scoped_session,
     create_async_engine,
+    async_sessionmaker
 )
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.orm import Session, declarative_base
 from sqlalchemy.sql.expression import Delete, Insert, Update
 
 from core.config import config
@@ -27,8 +28,8 @@ def reset_session_context(context: Token) -> None:
 
 
 engines = {
-    "writer": create_async_engine(config.POSTGRES_URL, pool_recycle=3600),
-    "reader": create_async_engine(config.POSTGRES_URL, pool_recycle=3600),
+    "writer": create_async_engine(config.postgres_url_str, pool_recycle=3600),
+    "reader": create_async_engine(config.postgres_url_str, pool_recycle=3600),
 }
 
 
@@ -39,7 +40,7 @@ class RoutingSession(Session):
         return engines["reader"].sync_engine
 
 
-async_session_factory = sessionmaker(
+async_session_factory = async_sessionmaker(
     class_=AsyncSession,
     sync_session_class=RoutingSession,
     expire_on_commit=False,

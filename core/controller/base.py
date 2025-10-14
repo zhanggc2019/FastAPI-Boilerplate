@@ -89,11 +89,11 @@ class BaseController(Generic[ModelType]):
         :return: True if the object was deleted, False otherwise.
         """
         delete = await self.repository.delete(model)
-        return delete
+        return delete or False
 
     @staticmethod
     async def extract_attributes_from_schema(
-        schema: BaseModel, excludes: set = None
+        schema: BaseModel, excludes: set | None = None
     ) -> dict[str, Any]:
         """
         Extracts the attributes from the schema.
@@ -103,4 +103,4 @@ class BaseController(Generic[ModelType]):
         :return: The attributes.
         """
 
-        return await schema.dict(exclude=excludes, exclude_unset=True)
+        return schema.model_dump(exclude=excludes, exclude_unset=True)
