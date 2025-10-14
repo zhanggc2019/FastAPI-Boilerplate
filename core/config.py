@@ -25,8 +25,10 @@ class Config(BaseSettings):
     )
 
     # 日志文件路径
-    LOG_DIR = BASE_PATH / 'log'
-    LOG_STD_LEVEL = "INFO"
+    LOG_DIR: Path = BASE_PATH / 'logs'
+    if not LOG_DIR.exists():
+        LOG_DIR.mkdir(parents=True)
+    LOG_STD_LEVEL: str = "INFO"
     TRACE_ID_REQUEST_HEADER_KEY: str = 'X-Request-ID'
     TRACE_ID_LOG_LENGTH: int = 32  # UUID 长度，必须小于等于 32
     TRACE_ID_LOG_DEFAULT_VALUE: str = '-'
@@ -41,7 +43,7 @@ class Config(BaseSettings):
     )
 
     # 静态资源目录
-    STATIC_DIR = BASE_PATH / 'static'
+    STATIC_DIR: Path = BASE_PATH / 'static'
     
     DEBUG: int = 0
     DEFAULT_LOCALE: str = "zh_CN"
