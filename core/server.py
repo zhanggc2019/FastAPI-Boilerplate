@@ -1,4 +1,3 @@
-from asyncio import create_task
 from typing import List
 
 from fastapi import Depends, FastAPI, Request
@@ -89,6 +88,6 @@ def create_app() -> FastAPI:
     init_listeners(app_=app_)
     init_cache()
     return app_
+from core.register import register_app
 
-
-app = create_app()
+app = register_app()

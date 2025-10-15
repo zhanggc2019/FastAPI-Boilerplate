@@ -4,8 +4,8 @@ from core.config import config
 
 celery_app = Celery(
     "worker",
-    backend=config.CELERY_BACKEND_URL,
-    broker=config.CELERY_BROKER_URL,
+    backend=config.celery_backend_url,
+    broker=config.celery_broker_url,
 )
 
 celery_app.conf.task_routes = {"worker.celery_worker.test_celery": "test-queue"}
