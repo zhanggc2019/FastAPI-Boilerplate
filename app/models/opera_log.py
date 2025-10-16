@@ -10,7 +10,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from core.common.enums import StatusType
 from core.common.model import TimeZone, id_key
 from core.common.schema import SchemaBase
-from core.common.timezone import timezone
 from core.database import Base
 
 

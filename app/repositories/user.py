@@ -1,8 +1,5 @@
-from sqlalchemy import Select
-from sqlalchemy.orm import joinedload
-
 from app.models import User
-from core.repository import BaseRepository
+from app.repositories.base_imports import BaseRepository, Select, joinedload
 
 
 class UserRepository(BaseRepository[User]):
@@ -18,7 +15,7 @@ class UserRepository(BaseRepository[User]):
         :param join_: Join relations.
         :return: User.
         """
-        query = await self._query(join_)
+        query = self._query(join_)
         query = query.filter(User.username == username)
 
         if join_ is not None:
@@ -34,7 +31,7 @@ class UserRepository(BaseRepository[User]):
         :param join_: Join relations.
         :return: User.
         """
-        query = await self._query(join_)
+        query = self._query(join_)
         query = query.filter(User.email == email)
 
         if join_ is not None:

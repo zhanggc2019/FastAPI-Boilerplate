@@ -1,15 +1,14 @@
-from pydantic import UUID4, BaseModel, Field
-from typing import Annotated
+from pydantic import Field
+
+from app.schemas.base import BaseUUIDResponse
 
 
-class TaskResponse(BaseModel):
+class TaskResponse(BaseUUIDResponse):
     title: str = Field(..., description="Task name", examples=["Task 1"])
     description: str = Field(..., description="Task description", examples=["Task 1 description"])
     completed: bool = Field(alias="is_completed", description="Task completed status")
-    uuid: UUID4 = Field(..., description="Task UUID", examples=["a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"])
 
     model_config = {
-        "from_attributes": True,
         "json_schema_extra": {
             "examples": [
                 {

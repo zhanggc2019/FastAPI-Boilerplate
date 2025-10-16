@@ -1,12 +1,8 @@
-from enum import Enum
-from uuid import uuid4
-
-from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from core.database import Base
-from core.database.mixins import TimestampMixin
+from core.models import BaseModel
+from core.permissions import BasePermission
 from core.security.access_control import (
     Allow,
     Authenticated,
@@ -15,35 +11,24 @@ from core.security.access_control import (
 )
 
 
-class TaskPermission(Enum):
-    CREATE = "create"
-    READ = "read"
-    EDIT = "edit"
-    DELETE = "delete"
-
-
-class Task(Base, TimestampMixin):
+class Task(BaseModel):
     __tablename__ = "tasks"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid4, unique=True, nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(String(255), nullable=False)
     is_completed = Column(Boolean, default=False, nullable=False)
 
-    task_author_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_author_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     author = relationship("User", back_populates="tasks", uselist=False, lazy="raise")
 
-    __mapper_args__ = {"eager_defaults": True}
-
     def __acl__(self):
-        basic_permissions = [TaskPermission.CREATE]
+        basic_permissions = [BasePermission.CREATE]
         self_permissions = [
-            TaskPermission.READ,
-            TaskPermission.EDIT,
-            TaskPermission.DELETE,
+            BasePermission.READ,
+            BasePermission.EDIT,
+            BasePermission.DELETE,
         ]
-        all_permissions = list(TaskPermission)
+        all_permissions = list(BasePermission)
 
         return [
             (Allow, Authenticated, basic_permissions),
