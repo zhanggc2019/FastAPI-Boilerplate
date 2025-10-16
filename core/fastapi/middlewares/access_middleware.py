@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from core.common.context import ctx
 from core.log import logger
 from core.utils.request_parse import parse_ip_info, parse_user_agent_info
 
@@ -25,23 +26,23 @@ class AccessMiddleware(BaseHTTPMiddleware):
             logger.debug(f'--> 请求开始[{path}]')
 
         perf_time = time.perf_counter()
-        request.state.perf_time = perf_time
+        ctx.perf_time = perf_time
 
         start_time = datetime.now()
-        request.state.start_time = start_time
+        ctx.start_time = start_time
 
         response = await call_next(request)
 
         elapsed = (time.perf_counter() - perf_time) * 1000
 
         ip = await parse_ip_info(request)
-        request.state.ip = ip
+        ctx.ip = ip
 
         ua_info = parse_user_agent_info(request)
-        request.state.user_agent = ua_info.user_agent
-        request.state.os = ua_info.os
-        request.state.browser = ua_info.browser
-        request.state.device = ua_info.device
+        ctx.user_agent = ua_info.user_agent
+        ctx.os = ua_info.os
+        ctx.browser = ua_info.browser
+        ctx.device = ua_info.device
 
         if request.method != 'OPTIONS':
             logger.debug('<-- 请求结束')

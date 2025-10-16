@@ -79,8 +79,9 @@ def create_async_engine_and_session(url: str | URL) -> tuple[AsyncEngine, async_
             pool_use_lifo=False,  # 低：False 高：True
         )
     except Exception as e:
-        logger.error('❌ 数据库链接失败 {}', e)
+        logger.error("❌ 数据库链接失败 {}", e)
         import sys
+
         sys.exit()
     else:
         db_session = async_sessionmaker(
@@ -90,6 +91,7 @@ def create_async_engine_and_session(url: str | URL) -> tuple[AsyncEngine, async_
             expire_on_commit=False,  # 禁用提交时过期
         )
         return engine, db_session
+
 
 async def get_session():
     """
@@ -105,33 +107,20 @@ async def get_session():
 
 
 async def create_tables() -> None:
-    """创建数据库表"""
-    # 修复原有的 create_tables 方法
+    """创建数据库表（动态方式）"""
     print("开始创建数据库表...")
-    
-    # 确保模型被导入，这样它们会被注册到 MappedBase.metadata 中
-    from app.models.user import User
-    from app.models.task import Task
-    
-    # 手动触发模型的导入
-    _ = User
-    _ = Task
-    
-    # 打印 MappedBase 的元数据信息
-    print(f"导入模型后，已注册的表: {list(MappedBase.metadata.tables.keys())}")
-    print(f"MappedBase 类: {MappedBase}")
-    print(f"MappedBase metadata: {MappedBase.metadata}")
-    
-    # 检查 User 和 Task 类的元数据
-    print(f"User.__table__: {User.__table__}")
-    print(f"Task.__table__: {Task.__table__}")
-    
-    # 直接使用 User 和 Task 的元数据来创建表
-    async with engines["writer"].begin() as conn:
-        await conn.run_sync(User.__table__.create, checkfirst=True)
-        await conn.run_sync(Task.__table__.create, checkfirst=True)
-    print("数据库表创建完成")
 
+    # 导入所有模型，确保它们被注册到 Base.metadata 中
+    from app import models
+    from core.database import Base
+
+    # 打印 Base 的元数据信息
+    print(f"已注册的表: {list(Base.metadata.tables.keys())}")
+
+    # 使用 metadata 创建所有表
+    async with engines["writer"].begin() as conn:
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+    print("数据库表创建完成")
 
 
 Base = declarative_base()
