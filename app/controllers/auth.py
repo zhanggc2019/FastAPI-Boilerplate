@@ -64,7 +64,7 @@ class AuthController(BaseController[User]):
             access_token=JWTHandler.encode(payload={"user_id": token.get("user_id")}),
             refresh_token=JWTHandler.encode(payload={"sub": "refresh_token"}),
         )
-    
+
     @Transactional(propagation=Propagation.REQUIRED)
     async def oauth_login(self, provider: str, token: str) -> Token:
         if provider == "google":
@@ -110,7 +110,7 @@ class AuthController(BaseController[User]):
             )
             if response.status_code != 200:
                 raise BadRequestException("Invalid Google token")
-            
+
             user_info = response.json()
             return {
                 "id": user_info["id"],
@@ -125,9 +125,9 @@ class AuthController(BaseController[User]):
             )
             if response.status_code != 200:
                 raise BadRequestException("Invalid GitHub token")
-            
+
             user_info = response.json()
-            
+
             # Get email as it's not always returned in the main user endpoint
             email_response = await client.get(
                 "https://api.github.com/user/emails",
@@ -135,15 +135,15 @@ class AuthController(BaseController[User]):
             )
             emails = email_response.json()
             primary_email = next((email["email"] for email in emails if email["primary"]), None)
-            
+
             if not primary_email:
                 raise BadRequestException("No email found for GitHub user")
-            
+
             return {
                 "id": user_info["id"],
                 "email": primary_email,
             }
-            
+
     async def _get_wechat_user_info(self, code: str) -> dict:
         # Get access token from WeChat
         async with httpx.AsyncClient() as client:
@@ -153,50 +153,46 @@ class AuthController(BaseController[User]):
                     "appid": config.WECHAT_APP_ID,
                     "secret": config.WECHAT_APP_SECRET,
                     "code": code,
-                    "grant_type": "authorization_code"
-                }
+                    "grant_type": "authorization_code",
+                },
             )
-            
+
             if token_response.status_code != 200:
                 raise BadRequestException("Failed to get WeChat access token")
-            
+
             token_data = token_response.json()
-            
+
             if "errcode" in token_data:
                 raise BadRequestException(f"WeChat API error: {token_data['errmsg']}")
-            
+
             # Get user info
             user_response = await client.get(
                 "https://api.weixin.qq.com/sns/userinfo",
-                params={
-                    "access_token": token_data["access_token"],
-                    "openid": token_data["openid"],
-                    "lang": "zh_CN"
-                }
+                params={"access_token": token_data["access_token"], "openid": token_data["openid"], "lang": "zh_CN"},
             )
-            
+
             if user_response.status_code != 200:
                 raise BadRequestException("Failed to get WeChat user info")
-            
+
             user_info = user_response.json()
-            
+
             if "errcode" in user_info:
                 raise BadRequestException(f"WeChat API error: {user_info['errmsg']}")
-            
+
             return {
                 "id": user_info["openid"],
                 "email": f"{user_info['openid']}@wechat.com",  # WeChat doesn't provide email by default
             }
-            
+
     async def _get_alipay_user_info(self, auth_code: str) -> dict:
         # For simplicity, we'll simulate the Alipay OAuth process
         # In a real implementation, you would need to use the Alipay SDK
         # to exchange the auth_code for an access token and then get user info
-        
+
         # This is a simplified implementation that just validates the auth_code format
         if not auth_code or len(auth_code) < 10:
             raise BadRequestException("Invalid Alipay auth code")
-        
+
         # In a real implementation, you would make requests to Alipay APIs here
         # For now, we'll simulate a successful response
         return {

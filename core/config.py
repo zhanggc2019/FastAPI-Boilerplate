@@ -18,16 +18,15 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
     # FastAPI
-    FASTAPI_API_V1_PATH: str = '/api/v1'
-    FASTAPI_TITLE: str = 'FastAPI Best Boilerplate'
-    FASTAPI_DESCRIPTION: str = 'FastAPI Best Boilerplate'
-    FASTAPI_DOCS_URL: str = '/docs'
-    FASTAPI_REDOC_URL: str = '/redoc'
-    FASTAPI_OPENAPI_URL: str | None = '/openapi'
+    FASTAPI_API_V1_PATH: str = "/api/v1"
+    FASTAPI_TITLE: str = "FastAPI Best Boilerplate"
+    FASTAPI_DESCRIPTION: str = "FastAPI Best Boilerplate"
+    FASTAPI_DOCS_URL: str = "/docs"
+    FASTAPI_REDOC_URL: str = "/redoc"
+    FASTAPI_OPENAPI_URL: str | None = "/openapi"
     FASTAPI_STATIC_FILES: bool = True
 
     MIDDLEWARE_CORS: bool = True
-
 
     # 日志文件路径
     LOG_DIR: Path = BASE_PATH / "logs"
@@ -53,8 +52,8 @@ class Config(BaseSettings):
     DEBUG: int = 0
     DEFAULT_LOCALE: str = "zh_CN"
     # 时间配置
-    DATETIME_TIMEZONE: str = 'Asia/Shanghai'
-    DATETIME_FORMAT: str = '%Y-%m-%d %H:%M:%S'
+    DATETIME_TIMEZONE: str = "Asia/Shanghai"
+    DATETIME_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
     ENVIRONMENT: str = EnvironmentType.DEVELOPMENT
     POSTGRES_URL: PostgresDsn = Field(
@@ -65,12 +64,12 @@ class Config(BaseSettings):
     # REDIS_URL: RedisDsn = Field(default=RedisDsn("redis://localhost:6379/7"), validation_alias="REDIS_URL")
     RELEASE_VERSION: str = "0.1"
     SHOW_SQL_ALCHEMY_QUERIES: int = 0
-    DATABASE_POOL_ECHO:int = 0
+    DATABASE_POOL_ECHO: int = 0
     SECRET_KEY: str = "super-secret-key"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
 
-     # .env Redis
+    # .env Redis
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_PASSWORD: str
@@ -83,11 +82,11 @@ class Config(BaseSettings):
     RABBITMQ_PASSWORD: str = "password"
     RABBITMQ_VHOST: str = "/"
 
-     # Redis
+    # Redis
     REDIS_TIMEOUT: int = 5
 
-     # 请求限制配置
-    REQUEST_LIMITER_REDIS_PREFIX: str = 'fastapi:limiter'
+    # 请求限制配置
+    REQUEST_LIMITER_REDIS_PREFIX: str = "fastapi:limiter"
 
     # OAuth settings
     GOOGLE_CLIENT_ID: str = ""
@@ -110,19 +109,18 @@ class Config(BaseSettings):
     ALIPAY_REDIRECT_URI: str = "http://localhost:8000/v1/users/oauth/alipay/callback"
 
     OPERA_LOG_ENCRYPT_KEY_INCLUDE: list[str] = [  # 将加密接口入参参数对应的值
-        'password',
-        'old_password',
-        'new_password',
-        'confirm_password',
+        "password",
+        "old_password",
+        "new_password",
+        "confirm_password",
     ]
-
 
     # 操作日志
     OPERA_LOG_PATH_EXCLUDE: list[str] = [
-        '/favicon.ico',
-        '/docs',
-        '/redoc',
-        '/openapi',
+        "/favicon.ico",
+        "/docs",
+        "/redoc",
+        "/openapi",
     ]
 
     @property

@@ -6,15 +6,25 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
 import core.database.transactional as transactional
 from app.models import Base
 from core.config import config
 
+# Load environment variables from .env file
+load_dotenv(".env")
+
 TEST_DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
+
+# Convert to asyncpg format if needed
+if TEST_DATABASE_URL and not TEST_DATABASE_URL.startswith("postgresql+asyncpg://"):
+    TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
 # Override the config to use the test database
 config.POSTGRES_URL = TEST_DATABASE_URL
+
+print(f"Using test database URL: {TEST_DATABASE_URL}")
 
 
 @pytest.fixture(scope="session")

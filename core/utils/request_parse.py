@@ -1,4 +1,3 @@
-
 from fastapi import Request
 from user_agents import parse
 
@@ -12,21 +11,21 @@ def get_request_ip(request: Request) -> str:
     :param request: FastAPI 请求对象
     :return:
     """
-    real = request.headers.get('X-Real-IP')
+    real = request.headers.get("X-Real-IP")
     if real:
         return real
 
-    forwarded = request.headers.get('X-Forwarded-For')
+    forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(',')[0]
+        return forwarded.split(",")[0]
 
     # 忽略 pytest
-    if request.client.host == 'testclient':
-        return '127.0.0.1'
-    return request.client.host
+    if request.client and request.client.host == "testclient":
+        return "127.0.0.1"
+    return request.client.host if request.client else "127.0.0.1"
 
 
-async def parse_ip_info(request: Request) -> str|None:
+async def parse_ip_info(request: Request) -> str | None:
     """
     解析请求的 IP 信息
 
@@ -44,7 +43,7 @@ def parse_user_agent_info(request: Request) -> UserAgentInfo:
     :param request: FastAPI 请求对象
     :return:
     """
-    user_agent = request.headers.get('User-Agent')
+    user_agent = request.headers.get("User-Agent")
     user_agent_ = parse(user_agent)
     os = user_agent_.get_os()
     browser = user_agent_.get_browser()

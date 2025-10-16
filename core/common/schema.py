@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, validate_email
 
 from core.common.timezone import timezone
 
-CustomPhoneNumber = Annotated[str, Field(pattern=r'^1[3-9]\d{9}$')]
+CustomPhoneNumber = Annotated[str, Field(pattern=r"^1[3-9]\d{9}$")]
 
 
 class CustomEmailStr(EmailStr):

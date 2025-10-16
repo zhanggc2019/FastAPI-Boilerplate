@@ -25,16 +25,12 @@ class JWTHandler:
     def encode(payload: dict) -> str:
         expire = datetime.now(timezone.utc) + timedelta(minutes=JWTHandler.expire_minutes)
         payload.update({"exp": expire})
-        return jwt.encode(
-            payload, JWTHandler.secret_key, algorithm=JWTHandler.algorithm
-        )
+        return jwt.encode(payload, JWTHandler.secret_key, algorithm=JWTHandler.algorithm)
 
     @staticmethod
     def decode(token: str) -> dict:
         try:
-            return jwt.decode(
-                token, JWTHandler.secret_key, algorithms=[JWTHandler.algorithm]
-            )
+            return jwt.decode(token, JWTHandler.secret_key, algorithms=[JWTHandler.algorithm])
         except ExpiredSignatureError as exception:
             raise JWTExpiredError() from exception
         except JWTError as exception:

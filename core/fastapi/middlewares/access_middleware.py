@@ -20,10 +20,10 @@ class AccessMiddleware(BaseHTTPMiddleware):
         :param call_next: 下一个中间件或路由处理函数
         :return:
         """
-        path = request.url.path if not request.url.query else request.url.path + '/' + request.url.query
+        path = request.url.path if not request.url.query else request.url.path + "/" + request.url.query
 
-        if request.method != 'OPTIONS':
-            logger.debug(f'--> 请求开始[{path}]')
+        if request.method != "OPTIONS":
+            logger.debug(f"--> 请求开始[{path}]")
 
         perf_time = time.perf_counter()
         ctx.perf_time = perf_time
@@ -44,12 +44,13 @@ class AccessMiddleware(BaseHTTPMiddleware):
         ctx.browser = ua_info.browser
         ctx.device = ua_info.device
 
-        if request.method != 'OPTIONS':
-            logger.debug('<-- 请求结束')
+        if request.method != "OPTIONS":
+            logger.debug("<-- 请求结束")
 
+            client_host = getattr(request.client, 'host', 'unknown') if request.client else 'unknown'
             logger.info(
-                f'{request.client.host: <15} | {request.method: <8} | {response.status_code: <6} | '
-                f'{path} | {elapsed:.3f}ms',
+                f"{client_host: <15} | {request.method: <8} | {response.status_code: <6} | "
+                f"{path} | {elapsed:.3f}ms",
             )
 
         return response

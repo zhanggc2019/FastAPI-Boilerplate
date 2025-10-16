@@ -39,11 +39,11 @@ def default_formatter(record: logging.LogRecord) -> str:
 
     # 重写 sqlalchemy echo 输出
     # https://github.com/sqlalchemy/sqlalchemy/discussions/12791
-    record_name = record['name'] or ''
-    if record_name.startswith('sqlalchemy'):
-        record['message'] = re.sub(r'\s+', ' ', record['message']).strip()
+    record_name = record["name"] or ""
+    if record_name.startswith("sqlalchemy"):
+        record["message"] = re.sub(r"\s+", " ", record["message"]).strip()
 
-    return settings.LOG_FORMAT if settings.LOG_FORMAT.endswith('\n') else f'{settings.LOG_FORMAT}\n'
+    return settings.LOG_FORMAT if settings.LOG_FORMAT.endswith("\n") else f"{settings.LOG_FORMAT}\n"
 
 
 def setup_logging() -> None:
@@ -63,7 +63,7 @@ def setup_logging() -> None:
         logging.getLogger(name).handlers = []
 
         # 配置日志传播规则
-        if 'uvicorn.access' in name or 'watchfiles.main' in name:
+        if "uvicorn.access" in name or "watchfiles.main" in name:
             logging.getLogger(name).propagate = False
         else:
             logging.getLogger(name).propagate = True
@@ -78,17 +78,17 @@ def setup_logging() -> None:
     # https://github.com/snok/asgi-correlation-id/issues/7
     def correlation_id_filter(record: logging.LogRecord) -> logging.LogRecord:
         cid = correlation_id.get(settings.TRACE_ID_LOG_DEFAULT_VALUE)
-        record['correlation_id'] = cid[: settings.TRACE_ID_LOG_LENGTH]
+        record["correlation_id"] = cid[: settings.TRACE_ID_LOG_LENGTH]
         return record
 
     # 配置 loguru 处理器
     logger.configure(
         handlers=[
             {
-                'sink': sys.stdout,
-                'level': settings.LOG_STD_LEVEL,
-                'format': default_formatter,
-                'filter': lambda record: correlation_id_filter(record),
+                "sink": sys.stdout,
+                "level": settings.LOG_STD_LEVEL,
+                "format": default_formatter,
+                "filter": lambda record: correlation_id_filter(record),
             },
         ],
     )
@@ -106,26 +106,26 @@ def set_custom_logfile() -> None:
     # 日志压缩回调
     def compression(filepath: str) -> str:
         filename = filepath.split(os.sep)[-1]
-        original_filename = filename.split('.')[0]
-        if '-' in original_filename:
-            return settings.LOG_DIR / f'{original_filename}.log'
-        return settings.LOG_DIR / f'{original_filename}_{datetime.now().strftime("%Y-%m-%d")}.log'
+        original_filename = filename.split(".")[0]
+        if "-" in original_filename:
+            return settings.LOG_DIR / f"{original_filename}.log"
+        return settings.LOG_DIR / f"{original_filename}_{datetime.now().strftime('%Y-%m-%d')}.log"
 
     # 日志文件通用配置
     # https://loguru.readthedocs.io/en/stable/api/logger.html#loguru._logger.Logger.add
     log_config = {
-        'format': default_formatter,
-        'enqueue': True,
-        'rotation': '00:00',
-        'retention': '15 days',
-        'compression': lambda filepath: os.rename(filepath, compression(filepath)),
+        "format": default_formatter,
+        "enqueue": True,
+        "rotation": "00:00",
+        "retention": "15 days",
+        "compression": lambda filepath: os.rename(filepath, compression(filepath)),
     }
 
     # 标准输出文件
     logger.add(
         str(log_access_file),
         level=settings.LOG_FILE_ACCESS_LEVEL,
-        filter=lambda record: record['level'].no <= 25,
+        filter=lambda record: record["level"].no <= 25,
         backtrace=False,
         diagnose=False,
         **log_config,
@@ -135,7 +135,7 @@ def set_custom_logfile() -> None:
     logger.add(
         str(log_error_file),
         level=settings.LOG_FILE_ERROR_LEVEL,
-        filter=lambda record: record['level'].no >= 30,
+        filter=lambda record: record["level"].no >= 30,
         backtrace=True,
         diagnose=True,
         **log_config,

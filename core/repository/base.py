@@ -31,9 +31,7 @@ class BaseRepository(Generic[ModelType]):
         self.session.add(model)
         return model
 
-    async def get_all(
-        self, skip: int = 0, limit: int = 100, join_: set[str] | None = None
-    ) -> list[ModelType]:
+    async def get_all(self, skip: int = 0, limit: int = 100, join_: set[str] | None = None) -> list[ModelType]:
         """
         Returns a list of model instances.
 
@@ -47,7 +45,7 @@ class BaseRepository(Generic[ModelType]):
 
         if join_ is not None:
             return await self._all_unique(query)
-            
+
         return await self._all(query)
 
     async def get_by(

@@ -10,9 +10,7 @@ class TaskRepository(BaseRepository[Task]):
     Task repository provides all the database operations for the Task model.
     """
 
-    async def get_by_author_id(
-        self, author_id: int, join_: set[str] | None = None
-    ) -> list[Task]:
+    async def get_by_author_id(self, author_id: int, join_: set[str] | None = None) -> list[Task]:
         """
         Get all tasks by author id.
 
@@ -46,5 +44,5 @@ class TaskRepository(BaseRepository[Task]):
         :return: The updated task.
         """
         task = await self.get_by("id", task_id)
-        setattr(task, 'is_completed', completed)
+        setattr(task, "is_completed", completed)
         return task

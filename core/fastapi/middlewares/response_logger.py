@@ -1,17 +1,16 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class ResponseInfo(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     headers: Optional[Headers] = Field(default=None, title="Response header")
     body: str = Field(default="", title="응답 바디")
     status_code: Optional[int] = Field(default=None, title="Status code")
-
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class ResponseLoggerMiddleware:
@@ -30,7 +29,11 @@ class ResponseLoggerMiddleware:
                 response_info.status_code = message.get("status")
             elif message.get("type") == "http.response.body":
                 if body := message.get("body"):
-                    response_info.body += body.decode("utf8")
+                    try:
+                        response_info.body += body.decode("utf8")
+                    except UnicodeDecodeError:
+                        # Skip binary content (CSS, JS, images, etc.)
+                        response_info.body += "[binary content]"
 
             await send(message)
 

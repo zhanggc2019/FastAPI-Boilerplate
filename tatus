@@ -1,0 +1,412 @@
+warning: in the working copy of 'pyproject.toml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'uv.lock', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/Makefile b/Makefile[m
+[1mindex bfee67f..8d3be74 100644[m
+[1m--- a/Makefile[m
+[1m+++ b/Makefile[m
+[36m@@ -36,7 +36,7 @@[m [mtargets:[m
+ [m
+ .PHONY: install[m
+ install: ## Install dependencies[m
+[31m-	poetry install[m
+[32m+[m	[32muv sync[m
+ [m
+ .PHONY: run[m
+ run: start[m
+[36m@@ -46,28 +46,28 @@[m [mstart: ## Starts the server[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run python main.py[m
+[32m+[m	[32muv run python main.py[m
+ [m
+ .PHONY: migrate[m
+ migrate: ## Run the migrations[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run alembic upgrade head[m
+[32m+[m	[32muv run alembic upgrade head[m
+ [m
+ .PHONY: rollback[m
+ rollback: ## Rollback migrations one level[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run alembic downgrade -1[m
+[32m+[m	[32muv run alembic downgrade -1[m
+ [m
+ .PHONY: reset-database[m
+ reset-database: ## Rollback all migrations[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run alembic downgrade base[m
+[32m+[m	[32muv run alembic downgrade base[m
+ [m
+ .PHONY: generate-migration [m
+ generate-migration: ## Generate a new migration[m
+[36m@@ -75,14 +75,14 @@[m [mgenerate-migration: ## Generate a new migration[m
+ 	$(eval export $(sh sed 's/=.*//' .env)) [m
+ [m
+ 	@read -p "Enter migration message: " message; \[m
+[31m-	poetry run alembic revision --autogenerate -m "$$message"[m
+[32m+[m	[32muv run alembic revision --autogenerate -m "$$message"[m
+ [m
+ .PHONY: celery-worker[m
+ celery-worker: ## Start celery worker[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run celery -A worker worker -l info[m
+[32m+[m	[32muv run celery -A worker worker -l info[m
+ [m
+ # Check, lint and format targets[m
+ # ------------------------------[m
+[36m@@ -92,25 +92,24 @@[m [mcheck: check-format lint[m
+ [m
+ .PHONY: check-format[m
+ check-format: ## Dry-run code formatter[m
+[31m-	poetry run black ./ --check[m
+[31m-	poetry run isort ./ --profile black --check[m
+[32m+[m	[32muv run black ./ --check[m
+[32m+[m	[32muv run isort ./ --profile black --check[m
+ [m
+ .PHONY: lint[m
+ lint: ## Run linter[m
+[31m-	poetry run pylint ./api ./app ./core[m
+[32m+[m	[32muv run pylint ./api ./app ./core[m
+  [m
+ .PHONY: format[m
+ format: ## Run code formatter[m
+[31m-	poetry run black ./[m
+[31m-	poetry run isort ./ --profile black[m
+[32m+[m	[32muv run ruff format ./[m
+ [m
+ .PHONY: check-lockfile[m
+ check-lockfile: ## Compares lock file with pyproject.toml[m
+[31m-	poetry lock --check[m
+[32m+[m	[32muv lock --check[m
+ [m
+ .PHONY: test[m
+ test: ## Run the test suite[m
+ 	$(eval include .env)[m
+ 	$(eval export $(sh sed 's/=.*//' .env))[m
+ [m
+[31m-	poetry run pytest -vv -s --cache-clear ./[m
+\ No newline at end of file[m
+[32m+[m	[32muv run pytest -vv -s --cache-clear ./[m
+\ No newline at end of file[m
+[1mdiff --git a/README.md b/README.md[m
+[1mindex b9f30e5..f66c6db 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -40,44 +40,46 @@[m [mYou need following to run this project:[m
+ [m
+ - Python 3.11[m
+ - [Docker with Docker Compose](https://docs.docker.com/compose/install/)[m
+[31m-- [Poetry](https://python-poetry.org/docs/#installation)[m
+[32m+[m[32m- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver[m
+ [m
+ I use [asdf](https://asdf-vm.com/#/) to manage my python versions. You can use it too. However, it is only supported on Linux and macOS. For Windows, you can use something like pyenv.[m
+ [m
+ Once you have installed the above and have cloned the repository, you can follow the following steps to get the project up and running:[m
+ [m
+[31m-1. Create a virtual environment using poetry:[m
+[32m+[m[32m1. Create a virtual environment and install dependencies using uv:[m
+ [m
+ ```bash[m
+[31m-poetry shell[m
+[32m+[m[32muv sync[m
+ ```[m
+ [m
+[31m-2. Install the dependencies:[m
+[32m+[m[32mThis will create a virtual environment and install all dependencies automatically.[m
+ [m
+[31m-```bash[m
+[31m-poetry install[m
+[31m-```[m
+[31m-[m
+[31m-3. Run the database and redis containers:[m
+[32m+[m[32m2. Run the database and redis containers:[m
+ [m
+ ```bash[m
+ docker-compose up -d[m
+ ```[m
+ [m
+[31m-4. Copy the `.env.example` file to `.env` and update the values as per your needs.[m
+[32m+[m[32m3. Copy the `.env.example` file to `.env` and update the values as per your needs.[m
+ [m
+[31m-5. Run the migrations:[m
+[32m+[m[32m4. Run the migrations:[m
+ [m
+ ```bash[m
+ make migrate[m
+ ```[m
+ [m
+[31m-6. Run the server:[m
+[32m+[m[32m5. Run the server:[m
+ [m
+ ```bash[m
+ make run[m
+ ```[m
+ [m
+[32m+[m[32mor on Windows:[m
+[32m+[m
+[32m+[m[32m```powershell[m
+[32m+[m[32mpwsh scripts.ps1 start[m
+[32m+[m[32m```[m
+[32m+[m
+ The server should now be running on `http://localhost:8000` and the API documentation should be available at `http://localhost:8000/docs`.[m
+ [m
+ ### Usage Guide[m
+[36m@@ -241,16 +243,34 @@[m [mThe schemas are located in `app/schemas`. The schemas are used to validate the r[m
+ [m
+ #### Formatting[m
+ [m
+[31m-You can use `make format` to format the code using `black` and `isort`.[m
+[32m+[m[32mYou can use `make format` to format the code using `ruff format`.[m
+[32m+[m
+[32m+[m[32mOn Windows:[m
+[32m+[m
+[32m+[m[32m```powershell[m
+[32m+[m[32mpwsh scripts.ps1 format[m
+[32m+[m[32m```[m
+ [m
+ #### Linting[m
+ [m
+ You can use `make lint` to lint the code using `pylint`.[m
+ [m
+[32m+[m[32mOn Windows:[m
+[32m+[m
+[32m+[m[32m```powershell[m
+[32m+[m[32mpwsh scripts.ps1 lint[m
+[32m+[m[32m```[m
+[32m+[m
+ #### Testing[m
+ [m
+ The project contains tests for all endpoints, some of the logical components like `JWTHander` and `AccessControl` and an example of testing complex inner components like `BaseRepository`. The tests are located in `tests/`. You can run the tests using `make test`.[m
+ [m
+[32m+[m[32mOn Windows:[m
+[32m+[m
+[32m+[m[32m```powershell[m
+[32m+[m[32mpwsh scripts.ps1 test[m
+[32m+[m[32m```[m
+[32m+[m
+ ## Contributing[m
+ [m
+ Contributions are higly welcome. Please open an issue or a PR if you want to contribute.[m
+[1mdiff --git a/api/v1/tasks/tasks.py b/api/v1/tasks/tasks.py[m
+[1mindex 8c41e2e..e5f6317 100644[m
+[1m--- a/api/v1/tasks/tasks.py[m
+[1m+++ b/api/v1/tasks/tasks.py[m
+[36m@@ -48,4 +48,4 @@[m [masync def get_task([m
+     task = await task_controller.get_by_uuid(UUID(task_uuid))[m
+ [m
+     assert_access(task)[m
+[31m-    return TaskResponse.model_validate(task)[m
+\ No newline at end of file[m
+[32m+[m[32m    return TaskResponse.model_validate(task)[m
+[1mdiff --git a/api/v1/users/users.py b/api/v1/users/users.py[m
+[1mindex dba9c47..2178336 100644[m
+[1m--- a/api/v1/users/users.py[m
+[1m+++ b/api/v1/users/users.py[m
+[36m@@ -47,9 +47,7 @@[m [masync def login_user([m
+     login_user_request: LoginUserRequest,[m
+     auth_controller: AuthController = Depends(Factory().get_auth_controller),[m
+ ) -> Token:[m
+[31m-    return await auth_controller.login([m
+[31m-        email=login_user_request.email, password=login_user_request.password[m
+[31m-    )[m
+[32m+[m[32m    return await auth_controller.login(email=login_user_request.email, password=login_user_request.password)[m
+ [m
+ [m
+ @user_router.get("/profile", dependencies=[Depends(AuthenticationRequired)])[m
+[36m@@ -67,7 +65,7 @@[m [masync def oauth_login([m
+ ) -> Token:[m
+     if provider not in ["google", "github", "wechat", "alipay"]:[m
+         raise HTTPException(status_code=400, detail="Unsupported OAuth provider")[m
+[31m-    [m
+[32m+[m
+     token = await auth_controller.oauth_login(provider, oauth_login.code)[m
+     return token  # type: ignore[m
+ [m
+[36m@@ -111,4 +109,6 @@[m [masync def oauth_callback(provider: str, code: str):[m
+     # This is a simplified callback endpoint[m
+     # In a real application, you would exchange the code for an access token[m
+     # and then redirect to your frontend with the token or set a cookie[m
+[31m-    return {"message": f"OAuth callback received for {provider} with code {code}. In a real application, you would exchange this code for an access token."}[m
+\ No newline at end of file[m
+[32m+[m[32m    return {[m
+[32m+[m[32m        "message": f"OAuth callback received for {provider} with code {code}. In a real application, you would exchange this code for an access token."[m
+[32m+[m[32m    }[m
+[1mdiff --git a/app/controllers/auth.py b/app/controllers/auth.py[m
+[1mindex 350b205..ed6f278 100644[m
+[1m--- a/app/controllers/auth.py[m
+[1m+++ b/app/controllers/auth.py[m
+[36m@@ -64,7 +64,7 @@[m [mclass AuthController(BaseController[User]):[m
+             access_token=JWTHandler.encode(payload={"user_id": token.get("user_id")}),[m
+             refresh_token=JWTHandler.encode(payload={"sub": "refresh_token"}),[m
+         )[m
+[31m-    [m
+[32m+[m
+     @Transactional(propagation=Propagation.REQUIRED)[m
+     async def oauth_login(self, provider: str, token: str) -> Token:[m
+         if provider == "google":[m
+[36m@@ -110,7 +110,7 @@[m [mclass AuthController(BaseController[User]):[m
+             )[m
+             if response.status_code != 200:[m
+                 raise BadRequestException("Invalid Google token")[m
+[31m-            [m
+[32m+[m
+             user_info = response.json()[m
+             return {[m
+                 "id": user_info["id"],[m
+[36m@@ -125,9 +125,9 @@[m [mclass AuthController(BaseController[User]):[m
+             )[m
+             if response.status_code != 200:[m
+                 raise BadRequestException("Invalid GitHub token")[m
+[31m-            [m
+[32m+[m
+             user_info = response.json()[m
+[31m-            [m
+[32m+[m
+             # Get email as it's not always returned in the main user endpoint[m
+             email_response = await client.get([m
+                 "https://api.github.com/user/emails",[m
+[36m@@ -135,15 +135,15 @@[m [mclass AuthController(BaseController[User]):[m
+             )[m
+             emails = email_response.json()[m
+             primary_email = next((email["email"] for email in emails if email["primary"]), None)[m
+[31m-            [m
+[32m+[m
+             if not primary_email:[m
+                 raise BadRequestException("No email found for GitHub user")[m
+[31m-            [m
+[32m+[m
+             return {[m
+                 "id": user_info["id"],[m
+                 "email": primary_email,[m
+             }[m
+[31m-            [m
+[32m+[m
+     async def _get_wechat_user_info(self, code: str) -> dict:[m
+         # Get access token from WeChat[m
+         async with httpx.AsyncClient() as client:[m
+[36m@@ -153,53 +153,49 @@[m [mclass AuthController(BaseController[User]):[m
+                     "appid": config.WECHAT_APP_ID,[m
+                     "secret": config.WECHAT_APP_SECRET,[m
+                     "code": code,[m
+[31m-                    "grant_type": "authorization_code"[m
+[31m-                }[m
+[32m+[m[32m                    "grant_type": "authorization_code",[m
+[32m+[m[32m                },[m
+             )[m
+[31m-            [m
+[32m+[m
+             if token_response.status_code != 200:[m
+                 raise BadRequestException("Failed to get WeChat access token")[m
+[31m-            [m
+[32m+[m
+             token_data = token_response.json()[m
+[31m-            [m
+[32m+[m
+             if "errcode" in token_data:[m
+                 raise BadRequestException(f"WeChat API error: {token_data['errmsg']}")[m
+[31m-            [m
+[32m+[m
+             # Get user info[m
+             user_response = await client.get([m
+                 "https://api.weixin.qq.com/sns/userinfo",[m
+[31m-                params={[m
+[31m-                    "access_token": token_data["access_token"],[m
+[31m-                    "openid": token_data["openid"],[m
+[31m-                    "lang": "zh_CN"[m
+[31m-                }[m
+[32m+[m[32m                params={"access_token": token_data["access_token"], "openid": token_data["openid"], "lang": "zh_CN"},[m
+             )[m
+[31m-            [m
+[32m+[m
+             if user_response.status_code != 200:[m
+                 raise BadRequestException("Failed to get WeChat user info")[m
+[31m-            [m
+[32m+[m
+             user_info = user_response.json()[m
+[31m-            [m
+[32m+[m
+             if "errcode" in user_info:[m
+                 raise BadRequestException(f"WeChat API error: {user_info['errmsg']}")[m
+[31m-            [m
+[32m+[m
+             return {[m
+                 "id": user_info["openid"],[m
+                 "email": f"{user_info['openid']}@wechat.com",  # WeChat doesn't provide email by default[m
+             }[m
+[31m-            [m
+[32m+[m
+     async def _get_alipay_user_info(self, auth_code: str) -> dict:[m
+         # For simplicity, we'll simulate the Alipay OAuth process[m
+         # In a real implementation, you would need to use the Alipay SDK[m
+         # to exchange the auth_code for an access token and then get user info[m
+[31m-        [m
+[32m+[m
+         # This is a simplified implementation that just validates the auth_code format[m
+         if not auth_code or len(auth_code) < 10:[m
+             raise BadRequestException("Invalid Alipay auth code")[m
+[31m-        [m
+[32m+[m
+         # In a real implementation, you would make requests to Alipay APIs here[m
+         # For now, we'll simulate a successful response[m
+         return {[m
+             "id": f"alipay_user_{auth_code[:10]}",[m
+             "email": f"{auth_code[:10]}@alipay.com",  # Alipay doesn't always provide email[m
+[31m-        }[m
+\ No newline at end of file[m
+[32m+[m[32m        }[m
+[1mdiff --git a/app/controllers/task.py b/app/controllers/task.py[m
+[1mindex 45d2fde..7469fc7 100644[m
+[1m--- a/app/controllers/task.py[m
+[1m+++ b/app/controllers/task.py[m
+[36m@@ -49,4 +49,4 @@[m [mclass TaskController(BaseController[Task]):[m
+         :return: The task.[m
+         """[m
+ [m
+[31m-        return await self.task_repository.set_completed(task_id, True)[m
+\ No newline at end of file[m
+[32m+[m[32m        return await self.task_repository.set_completed(task_id, True)[m
+[1mdiff --git a/app/models/__init__.py b/app/models/__init__.py[m
+[1mindex 739c1d9..b93357d 100644[m
+[1m--- a/app/models/__init__.py[m
+[1m+++ b/app/models/__init__.py[m
+[36m@@ -2,4 +2,4 @@[m [mfrom core.database import Base[m
+ [m
+ from .opera_log import OperaLog[m
+ from .task import Task[m
+[31m-from .user import User[m
+\ No newline at end of file[m
+[32m+[m[32mfrom .user import User[m
+[1mdiff --git a/app/models/opera_log.py b/app/models/opera_log.py[m
+[1mindex 8a061fe..146fbb5 100644[m
+[1m--- a/app/models/opera_log.py[m
+[1m+++ b/app/models/opera_log.py[m
+[36m@@ -17,22 +17,22 @@[m [mfrom core.database import Base[m
+ class OperaLogSchemaBase(SchemaBase):[m
+     """操作日志基础模型"""[m
+ [m
+[31m-    trace_id: str = Field(description='追踪 ID')[m
+[31m-    username: str | None = Field(None, description='用户名')[m
+[31m-    method: str = Field(description='请求方法')[m
+[31m-    title: str = Field(description='操作标题')[m
+[31m-    path: str = Field(description='请求路径')[m
+[31m-    ip: str = Field(description='IP 地址')[m
+[31m-    user_agent: str = Field(description='用户代理')[m
+[31m-    os: str | None = Field(None, description='操作系统')[m
+[31m-    browser: str | None = Field(None, description='浏览器')[m
+[31m-    device: str | None = Field(None, description='设备')[m
+[31m-    args: dict[str, Any] | None = Field(None, description='请求参数')[m
+[31m-    status: StatusType = Field(description='状态')[m
+[31m-    code: str = Field(description='状态码')[m
+[31m-    msg: str | None = Field(None, description='消息')[m
+[31m-    cost_time: float = Field(description='耗时')[m
+[31m-    opera_time: datetime = Field(description='操作时间')[m
+[32m+[m

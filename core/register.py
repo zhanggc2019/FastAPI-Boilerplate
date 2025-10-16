@@ -159,9 +159,9 @@ def register_middleware(app: FastAPI) -> None:
     )
     app.add_middleware(SQLAlchemyMiddleware)
     # Access log
-    app.add_middleware(AccessMiddleware)
+    # app.add_middleware(AccessMiddleware)  # Disabled as it causes issues with /docs
 
-    app.add_middleware(ResponseLoggerMiddleware)
+    app.add_middleware(ResponseLoggerMiddleware)  # Re-enabled since it's not the issue
 
     # Trace ID
     app.add_middleware(CorrelationIdMiddleware, validator=False)

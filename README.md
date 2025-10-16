@@ -40,42 +40,44 @@ You need following to run this project:
 
 - Python 3.11
 - [Docker with Docker Compose](https://docs.docker.com/compose/install/)
-- [Poetry](https://python-poetry.org/docs/#installation)
+- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
 
 I use [asdf](https://asdf-vm.com/#/) to manage my python versions. You can use it too. However, it is only supported on Linux and macOS. For Windows, you can use something like pyenv.
 
 Once you have installed the above and have cloned the repository, you can follow the following steps to get the project up and running:
 
-1. Create a virtual environment using poetry:
+1. Create a virtual environment and install dependencies using uv:
 
 ```bash
-poetry shell
+uv sync
 ```
 
-2. Install the dependencies:
+This will create a virtual environment and install all dependencies automatically.
 
-```bash
-poetry install
-```
-
-3. Run the database and redis containers:
+2. Run the database and redis containers:
 
 ```bash
 docker-compose up -d
 ```
 
-4. Copy the `.env.example` file to `.env` and update the values as per your needs.
+3. Copy the `.env.example` file to `.env` and update the values as per your needs.
 
-5. Run the migrations:
+4. Run the migrations:
 
 ```bash
 make migrate
 ```
 
-6. Run the server:
+5. Run the server:
 
 ```bash
 make run
+```
+
+or on Windows:
+
+```powershell
+pwsh scripts.ps1 start
 ```
 
 The server should now be running on `http://localhost:8000` and the API documentation should be available at `http://localhost:8000/docs`.
@@ -241,15 +243,33 @@ The schemas are located in `app/schemas`. The schemas are used to validate the r
 
 #### Formatting
 
-You can use `make format` to format the code using `black` and `isort`.
+You can use `make format` to format the code using `ruff format`.
+
+On Windows:
+
+```powershell
+pwsh scripts.ps1 format
+```
 
 #### Linting
 
 You can use `make lint` to lint the code using `pylint`.
 
+On Windows:
+
+```powershell
+pwsh scripts.ps1 lint
+```
+
 #### Testing
 
 The project contains tests for all endpoints, some of the logical components like `JWTHander` and `AccessControl` and an example of testing complex inner components like `BaseRepository`. The tests are located in `tests/`. You can run the tests using `make test`.
+
+On Windows:
+
+```powershell
+pwsh scripts.ps1 test
+```
 
 ## Contributing
 

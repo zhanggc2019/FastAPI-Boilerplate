@@ -33,7 +33,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         response = None
         path = request.url.path
 
-        if path in settings.OPERA_LOG_PATH_EXCLUDE or not path.startswith(f'{settings.FASTAPI_API_V1_PATH}'):
+        if path in settings.OPERA_LOG_PATH_EXCLUDE or not path.startswith(f"{settings.FASTAPI_API_V1_PATH}"):
             response = await call_next(request)
         else:
             method = request.method
@@ -41,35 +41,35 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
             # 执行请求
             code = 200
-            msg = 'Success'
+            msg = "Success"
             status = StatusType.enable
             error = None
             try:
                 response = await call_next(request)
                 elapsed = (time.perf_counter() - ctx.perf_time) * 1000
                 for e in [
-                    '__request_http_exception__',
-                    '__request_validation_exception__',
-                    '__request_assertion_error__',
-                    '__request_custom_exception__',
+                    "__request_http_exception__",
+                    "__request_validation_exception__",
+                    "__request_assertion_error__",
+                    "__request_custom_exception__",
                 ]:
                     exception = ctx.get(e)
                     if exception:
-                        code = exception.get('code')
-                        msg = exception.get('msg')
-                        logger.error(f'请求异常: {msg}')
+                        code = exception.get("code")
+                        msg = exception.get("msg")
+                        logger.error(f"请求异常: {msg}")
                         break
             except Exception as e:
                 elapsed = (time.perf_counter() - ctx.perf_time) * 1000
-                code = getattr(e, 'code', 500)  # 兼容 SQLAlchemy 异常用法
-                msg = getattr(e, 'msg', str(e))  # 不建议使用 traceback 模块获取错误信息，会暴漏代码信息
+                code = getattr(e, "code", 500)  # 兼容 SQLAlchemy 异常用法
+                msg = getattr(e, "msg", str(e))  # 不建议使用 traceback 模块获取错误信息，会暴漏代码信息
                 status = StatusType.disable
                 error = e
-                logger.error(f'请求异常: {e!s}')
+                logger.error(f"请求异常: {e!s}")
 
             # 此信息只能在请求后获取
-            route = request.scope.get('route')
-            summary = route.summary or '' if route else ''
+            route = request.scope.get("route")
+            summary = route.summary or "" if route else ""
 
             try:
                 # 此信息来源于 JWT 认证中间件
@@ -78,9 +78,9 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 username = None
 
             # 日志记录
-            logger.debug(f'接口摘要：[{summary}]')
-            logger.debug(f'请求地址：[{ctx.ip}]')
-            logger.debug(f'请求参数：{args}')
+            logger.debug(f"接口摘要：[{summary}]")
+            logger.debug(f"请求地址：[{ctx.ip}]")
+            logger.debug(f"请求参数：{args}")
 
             # 日志创建
             opera_log_in = CreateOperaLogParam(
@@ -112,7 +112,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
         return response
 
-
     async def get_request_args(self, request: Request) -> dict[str, Any] | None:
         """
         获取请求参数
@@ -125,39 +124,39 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         # 查询参数
         query_params = dict(request.query_params)
         if query_params:
-            args['query_params'] = await self.desensitization(query_params)
+            args["query_params"] = await self.desensitization(query_params)
 
         # 路径参数
         path_params = request.path_params
         if path_params:
-            args['path_params'] = await self.desensitization(path_params)
+            args["path_params"] = await self.desensitization(path_params)
 
         # Tip: .body() 必须在 .form() 之前获取
         # https://github.com/encode/starlette/discussions/1933
-        content_type = request.headers.get('Content-Type', '').split(';')
+        content_type = request.headers.get("Content-Type", "").split(";")
 
         # 请求体
         body_data = await request.body()
         if body_data:
             # 注意：非 json 数据默认使用 data 作为键
-            if 'application/json' not in content_type:
-                args['data'] = str(body_data)
+            if "application/json" not in content_type:
+                args["data"] = str(body_data)
             else:
                 json_data = await request.json()
                 if isinstance(json_data, dict):
-                    args['json'] = await self.desensitization(json_data)
+                    args["json"] = await self.desensitization(json_data)
                 else:
-                    args['data'] = str(body_data)
+                    args["data"] = str(body_data)
 
         # 表单参数
         form_data = await request.form()
         if len(form_data) > 0:
             for k, v in form_data.items():
                 form_data = {k: v.filename} if isinstance(v, UploadFile) else {k: v}
-            if 'multipart/form-data' not in content_type:
-                args['x-www-form-urlencoded'] = await self.desensitization(form_data)
+            if "multipart/form-data" not in content_type:
+                args["x-www-form-urlencoded"] = await self.desensitization(form_data)
             else:
-                args['form-data'] = await self.desensitization(form_data)
+                args["form-data"] = await self.desensitization(form_data)
 
         return args or None
 
@@ -172,7 +171,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         """
         for key, _ in args.items():
             if key in settings.OPERA_LOG_ENCRYPT_KEY_INCLUDE:
-                args[key] = '******'
+                args[key] = "******"
 
         return args
 
@@ -188,7 +187,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
             if logs:
                 try:
                     # todo 存入数据库
-                    print("模拟存入:",logs)
+                    print("模拟存入:", logs)
                     # await opera_log_service.bulk_create(objs=logs)
                 finally:
                     if not cls.opera_log_queue.empty():

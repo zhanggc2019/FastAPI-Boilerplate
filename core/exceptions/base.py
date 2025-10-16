@@ -56,6 +56,7 @@ class HTTPError(HTTPException):
     def __init__(self, *, code: int, message: Any = None, headers: dict[str, Any] | None = None) -> None:
         super().__init__(status_code=code, detail=message, headers=headers)
 
+
 class RequestError(Exception):
     """请求异常"""
 
@@ -63,10 +64,11 @@ class RequestError(Exception):
         self,
         *,
         code: int = 400,
-        message: str = 'Bad Request',
+        message: str = "Bad Request",
     ) -> None:
         self.code = code
         super().__init__(msg=message)
+
 
 class ServerError(Exception):
     """服务器异常"""
@@ -77,6 +79,6 @@ class ServerError(Exception):
     def __init__(
         self,
         *,
-        message: str = 'Internal Server Error',
+        message: str = "Internal Server Error",
     ) -> None:
         super().__init__(message=message)

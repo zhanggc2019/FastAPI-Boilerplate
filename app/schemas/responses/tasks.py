@@ -4,13 +4,9 @@ from typing import Annotated
 
 class TaskResponse(BaseModel):
     title: str = Field(..., description="Task name", examples=["Task 1"])
-    description: str = Field(
-        ..., description="Task description", examples=["Task 1 description"]
-    )
+    description: str = Field(..., description="Task description", examples=["Task 1 description"])
     completed: bool = Field(alias="is_completed", description="Task completed status")
-    uuid: UUID4 = Field(
-        ..., description="Task UUID", examples=["a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"]
-    )
+    uuid: UUID4 = Field(..., description="Task UUID", examples=["a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"])
 
     model_config = {
         "from_attributes": True,
@@ -20,8 +16,8 @@ class TaskResponse(BaseModel):
                     "title": "Task 1",
                     "description": "Task 1 description",
                     "is_completed": False,
-                    "uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+                    "uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 }
             ]
-        }
+        },
     }

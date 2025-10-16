@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,33 +25,23 @@ def mock_payload():
 
 @pytest.fixture
 def mock_token(mock_payload, mock_config):
-    expire = datetime.utcnow() + timedelta(minutes=mock_config.JWT_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=mock_config.JWT_EXPIRE_MINUTES)
     payload = mock_payload.copy()
     payload.update({"exp": expire})
-    return jwt.encode(
-        payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM
-    )
+    return jwt.encode(payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM)
 
 
 @pytest.fixture
 def mock_expired_token(mock_payload, mock_config):
-    expire = (
-        datetime.utcnow()
-        - timedelta(minutes=mock_config.JWT_EXPIRE_MINUTES)
-        - timedelta(seconds=10)
-    )
+    expire = datetime.now(timezone.utc) - timedelta(minutes=mock_config.JWT_EXPIRE_MINUTES) - timedelta(seconds=10)
     payload = mock_payload.copy()
     payload.update({"exp": expire})
-    return jwt.encode(
-        payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM
-    )
+    return jwt.encode(payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM)
 
 
 @pytest.fixture
 def mock_decode_token(mock_config, mock_payload):
-    return jwt.encode(
-        mock_payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM
-    )
+    return jwt.encode(mock_payload, mock_config.SECRET_KEY, algorithm=mock_config.JWT_ALGORITHM)
 
 
 @pytest.fixture

@@ -68,10 +68,12 @@ def make_middleware() -> List[Middleware]:
 def init_cache() -> None:
     Cache.init(backend=RedisBackend(), key_maker=CustomKeyMaker())
 
+
 def register_logger() -> None:
     """注册日志"""
     setup_logging()
     set_custom_logfile()
+
 
 def create_app() -> FastAPI:
     app_ = FastAPI(
@@ -88,6 +90,8 @@ def create_app() -> FastAPI:
     init_listeners(app_=app_)
     init_cache()
     return app_
+
+
 from core.register import register_app
 
 app = register_app()

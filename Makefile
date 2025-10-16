@@ -36,7 +36,7 @@ targets:
 
 .PHONY: install
 install: ## Install dependencies
-	poetry install
+	uv sync
 
 .PHONY: run
 run: start
@@ -46,28 +46,28 @@ start: ## Starts the server
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run python main.py
+	uv run python main.py
 
 .PHONY: migrate
 migrate: ## Run the migrations
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run alembic upgrade head
+	uv run alembic upgrade head
 
 .PHONY: rollback
 rollback: ## Rollback migrations one level
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run alembic downgrade -1
+	uv run alembic downgrade -1
 
 .PHONY: reset-database
 reset-database: ## Rollback all migrations
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run alembic downgrade base
+	uv run alembic downgrade base
 
 .PHONY: generate-migration 
 generate-migration: ## Generate a new migration
@@ -75,14 +75,14 @@ generate-migration: ## Generate a new migration
 	$(eval export $(sh sed 's/=.*//' .env)) 
 
 	@read -p "Enter migration message: " message; \
-	poetry run alembic revision --autogenerate -m "$$message"
+	uv run alembic revision --autogenerate -m "$$message"
 
 .PHONY: celery-worker
 celery-worker: ## Start celery worker
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run celery -A worker worker -l info
+	uv run celery -A worker worker -l info
 
 # Check, lint and format targets
 # ------------------------------
@@ -92,25 +92,24 @@ check: check-format lint
 
 .PHONY: check-format
 check-format: ## Dry-run code formatter
-	poetry run black ./ --check
-	poetry run isort ./ --profile black --check
+	uv run black ./ --check
+	uv run isort ./ --profile black --check
 
 .PHONY: lint
 lint: ## Run linter
-	poetry run pylint ./api ./app ./core
+	uv run pylint ./api ./app ./core
  
 .PHONY: format
 format: ## Run code formatter
-	poetry run black ./
-	poetry run isort ./ --profile black
+	uv run ruff format ./
 
 .PHONY: check-lockfile
 check-lockfile: ## Compares lock file with pyproject.toml
-	poetry lock --check
+	uv lock --check
 
 .PHONY: test
 test: ## Run the test suite
 	$(eval include .env)
 	$(eval export $(sh sed 's/=.*//' .env))
 
-	poetry run pytest -vv -s --cache-clear ./
+	uv run pytest -vv -s --cache-clear ./

@@ -41,10 +41,7 @@ def test_access_control():
     assert ac.has_permission(principals, "update", resource) is True
     assert ac.has_permission(principals, "delete", resource) is False
 
-    assert all(
-        permission in ac.show_permissions(principals, resource)
-        for permission in ["create", "read", "update"]
-    )
+    assert all(permission in ac.show_permissions(principals, resource) for permission in ["create", "read", "update"])
 
     ac.assert_access(principals, "read", resource)
     ac.assert_access(principals, "create", resource)
@@ -89,8 +86,7 @@ def test_access_control_multiple_resources():
     assert ac.has_permission(principals, "delete", [resource1, resource2]) is False
 
     assert all(
-        permission in ac.show_permissions(principals, [resource1, resource2])
-        for permission in ["read", "update"]
+        permission in ac.show_permissions(principals, [resource1, resource2]) for permission in ["read", "update"]
     )
 
     ac.assert_access(principals, "read", [resource1, resource2])

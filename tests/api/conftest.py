@@ -3,7 +3,7 @@ from typing import Any, Generator
 import pytest
 import pytest_asyncio
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
 from core.factory.factory import get_session
 from core.server import create_app
@@ -30,5 +30,8 @@ async def client(app: FastAPI, db_session) -> AsyncClient:
 
     app.dependency_overrides[get_session] = _get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    # Create ASGI transport for the app
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client

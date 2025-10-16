@@ -47,9 +47,7 @@ async def login_user(
     login_user_request: LoginUserRequest,
     auth_controller: AuthController = Depends(Factory().get_auth_controller),
 ) -> Token:
-    return await auth_controller.login(
-        email=login_user_request.email, password=login_user_request.password
-    )
+    return await auth_controller.login(email=login_user_request.email, password=login_user_request.password)
 
 
 @user_router.get("/profile", dependencies=[Depends(AuthenticationRequired)])
@@ -67,7 +65,7 @@ async def oauth_login(
 ) -> Token:
     if provider not in ["google", "github", "wechat", "alipay"]:
         raise HTTPException(status_code=400, detail="Unsupported OAuth provider")
-    
+
     token = await auth_controller.oauth_login(provider, oauth_login.code)
     return token  # type: ignore
 
@@ -111,4 +109,6 @@ async def oauth_callback(provider: str, code: str):
     # This is a simplified callback endpoint
     # In a real application, you would exchange the code for an access token
     # and then redirect to your frontend with the token or set a cookie
-    return {"message": f"OAuth callback received for {provider} with code {code}. In a real application, you would exchange this code for an access token."}
+    return {
+        "message": f"OAuth callback received for {provider} with code {code}. In a real application, you would exchange this code for an access token."
+    }

@@ -32,9 +32,7 @@ async def test_create_task_with_invalid_title(client: AsyncClient, db_session) -
 
 
 @pytest.mark.asyncio
-async def test_create_task_with_invalid_description(
-    client: AsyncClient, db_session
-) -> None:
+async def test_create_task_with_invalid_description(client: AsyncClient, db_session) -> None:
     """Test task creation with invalid description."""
     await _create_user_and_login(client)
 

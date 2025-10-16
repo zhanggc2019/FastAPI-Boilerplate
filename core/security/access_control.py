@@ -80,9 +80,7 @@ class AccessControl:
 
     def __call__(self, permissions: str):
         def _permission_dependency(principals=Depends(self.user_principals_getter)):
-            assert_access = functools.partial(
-                self.assert_access, principals, permissions
-            )
+            assert_access = functools.partial(self.assert_access, principals, permissions)
             return assert_access
 
         return _permission_dependency
@@ -95,9 +93,7 @@ class AccessControl:
         ):
             raise self.permission_exception
 
-    def has_permission(
-        self, principals: List[Principal], required_permissions: str, resource: Any
-    ):
+    def has_permission(self, principals: List[Principal], required_permissions: str, resource: Any):
         if not isinstance(resource, list):
             resource = [resource]
 
@@ -110,8 +106,7 @@ class AccessControl:
 
             for action, principal, permission in acl:
                 is_required_permissions_in_permission = any(
-                    required_permission in permission
-                    for required_permission in required_permissions
+                    required_permission in permission for required_permission in required_permissions
                 )
 
                 if (action == Allow and is_required_permissions_in_permission) and (
