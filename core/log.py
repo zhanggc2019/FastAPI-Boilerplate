@@ -43,7 +43,15 @@ def default_formatter(record: logging.LogRecord) -> str:
     if record_name.startswith("sqlalchemy"):
         record["message"] = re.sub(r"\s+", " ", record["message"]).strip()
 
-    return settings.LOG_FORMAT if settings.LOG_FORMAT.endswith("\n") else f"{settings.LOG_FORMAT}\n"
+    fmt = settings.LOG_FORMAT if settings.LOG_FORMAT.endswith("\n") else f"{settings.LOG_FORMAT}\n"
+    # 如果存在异常信息，则追加异常堆栈到日志
+    try:
+        has_exc = bool(record.get("exception"))
+    except Exception:
+        has_exc = False
+    if has_exc:
+        fmt = fmt + "{exception}\n"
+    return fmt
 
 
 def setup_logging() -> None:

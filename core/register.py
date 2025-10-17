@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from core.log import logger
 from fastapi_limiter import FastAPILimiter
 from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
@@ -45,12 +47,16 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     # 初始化 redis
     await redis_client.open()
 
-    # 初始化 limiter
-    await FastAPILimiter.init(
-        redis=redis_client,
-        prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
-        http_callback=http_limit_callback,
-    )
+    # 初始化 limiter（暂时禁用）
+    try:
+        await FastAPILimiter.init(
+            redis=redis_client,
+            prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
+            http_callback=http_limit_callback,
+        )
+        print("FastAPI Limiter 初始化成功")
+    except Exception as e:
+        print(f"FastAPI Limiter 初始化失败: {e}")
 
     # 创建操作日志任务
     create_task(OperaLogMiddleware.consumer())
@@ -67,6 +73,24 @@ def init_listeners(app_: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.code,
             content={"error_code": exc.error_code, "message": exc.message},
+        )
+
+    @app_.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        # 记录未处理异常的完整堆栈
+        logger.opt(exception=exc).error("未处理异常")
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Internal Server Error"},
+        )
+
+    @app_.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        # 记录校验异常详情（不需要完整堆栈）
+        logger.error(f"请求参数校验异常: {exc.errors()}")
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Unprocessable Entity", "errors": exc.errors()},
         )
 
 
@@ -150,7 +174,8 @@ def register_middleware(app: FastAPI) -> None:
             ),
         )
     # Opera log
-    app.add_middleware(OperaLogMiddleware)
+    # 暂时禁用以定位500来源
+    # app.add_middleware(OperaLogMiddleware)
     # JWT auth
     app.add_middleware(
         AuthenticationMiddleware,

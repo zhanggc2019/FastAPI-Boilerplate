@@ -1,7 +1,7 @@
 import time
 from asyncio import Queue
 from typing import Any
-
+from datetime import datetime
 from asgiref.sync import sync_to_async
 from fastapi import Response
 from starlette.datastructures import UploadFile
@@ -36,6 +36,17 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         if path in settings.OPERA_LOG_PATH_EXCLUDE or not path.startswith(f"{settings.FASTAPI_API_V1_PATH}"):
             response = await call_next(request)
         else:
+            # 初始化 ctx 关键字段（避免未启用 AccessMiddleware 时出错）
+            if not getattr(ctx, "perf_time", None):
+                ctx.perf_time = time.perf_counter()
+            if not getattr(ctx, "start_time", None):
+                ctx.start_time = datetime.now()
+            if not getattr(ctx, "ip", None):
+                ctx.ip = request.client.host if request.client else "unknown"
+            ua = request.headers.get("user-agent", None)
+            if not getattr(ctx, "user_agent", None) and ua:
+                ctx.user_agent = ua
+
             method = request.method
             args = await self.get_request_args(request)
 
@@ -62,10 +73,11 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 elapsed = (time.perf_counter() - ctx.perf_time) * 1000
                 code = getattr(e, "code", 500)  # 兼容 SQLAlchemy 异常用法
-                msg = getattr(e, "msg", str(e))  # 不建议使用 traceback 模块获取错误信息，会暴漏代码信息
+                msg = getattr(e, "msg", str(e))
                 status = StatusType.disable
                 error = e
-                logger.error(f"请求异常: {e!s}")
+                # 记录完整异常堆栈，便于排查
+                logger.exception("请求异常")
 
             # 此信息只能在请求后获取
             route = request.scope.get("route")
@@ -148,15 +160,20 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 else:
                     args["data"] = str(body_data)
 
-        # 表单参数
-        form_data = await request.form()
-        if len(form_data) > 0:
-            for k, v in form_data.items():
-                form_data = {k: v.filename} if isinstance(v, UploadFile) else {k: v}
-            if "multipart/form-data" not in content_type:
-                args["x-www-form-urlencoded"] = await self.desensitization(form_data)
-            else:
-                args["form-data"] = await self.desensitization(form_data)
+        # 表单参数（仅对POST/PUT/PATCH/DELETE请求处理）
+        if request.method not in ["GET", "HEAD", "OPTIONS"]:
+            try:
+                form_data = await request.form()
+                if len(form_data) > 0:
+                    for k, v in form_data.items():
+                        form_data = {k: v.filename} if isinstance(v, UploadFile) else {k: v}
+                    if "multipart/form-data" not in content_type:
+                        args["x-www-form-urlencoded"] = await self.desensitization(form_data)
+                    else:
+                        args["form-data"] = await self.desensitization(form_data)
+            except Exception:
+                # 如果表单解析失败，跳过表单数据处理
+                pass
 
         return args or None
 
