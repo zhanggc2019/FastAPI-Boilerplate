@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from loguru import logger
+from fastapi_limiter.depends import RateLimiter
 
 test_router = APIRouter()
 
 
-@test_router.get("/rate-limit-test", summary="限流测试接口", description="测试接口功能（限流功能暂时禁用）")
+@test_router.get("/rate-limit-test", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def rate_limit_test(request: Request):
     """
     限流测试接口（简化版）
@@ -23,9 +24,8 @@ async def rate_limit_test(request: Request):
     logger.info(f"限流测试接口调用 - IP: {client_ip}, Path: {request.url.path}, Method: {request.method}")
 
     return {
-        "message": "测试接口调用成功（限流功能暂时禁用）",
-        "timestamp": "2025-10-17 14:00:00",
-        "data": {"test_field": "这是一个测试数据", "rate_limit": "限流功能暂时禁用", "current_ip": client_ip},
+        "message": "测试接口调用成功",
+        "data": {"test_field": "这是一个测试数据",  "current_ip": client_ip},
         "status": "success",
     }
 

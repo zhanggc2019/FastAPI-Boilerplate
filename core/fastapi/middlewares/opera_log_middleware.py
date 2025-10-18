@@ -16,6 +16,7 @@ from core.common.queue import batch_dequeue
 from core.common.utils import get_request_trace_id
 from core.config import config as settings
 from core.log import logger
+from starlette_context.errors import ContextDoesNotExistError
 
 
 class OperaLogMiddleware(BaseHTTPMiddleware):
@@ -58,21 +59,27 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
             error = None
             try:
                 response = await call_next(request)
-                elapsed = (time.perf_counter() - ctx.perf_time) * 1000
+                perf_time = ctx.perf_time or time.perf_counter()
+                elapsed = (time.perf_counter() - perf_time) * 1000
                 for e in [
                     "__request_http_exception__",
                     "__request_validation_exception__",
                     "__request_assertion_error__",
                     "__request_custom_exception__",
                 ]:
-                    exception = ctx.get(e)
-                    if exception:
-                        code = exception.get("code")
-                        msg = exception.get("msg")
-                        logger.error(f"请求异常: {msg}")
+                    try:
+                        exception = ctx.get(e)
+                        if exception:
+                            code = exception.get("code")
+                            msg = exception.get("msg")
+                            logger.error(f"请求异常: {msg}")
+                            break
+                    except (ContextDoesNotExistError, AttributeError):
+                        # Context not available, skip exception checking
                         break
             except Exception as e:
-                elapsed = (time.perf_counter() - ctx.perf_time) * 1000
+                perf_time = ctx.perf_time or time.perf_counter()
+                elapsed = (time.perf_counter() - perf_time) * 1000
                 code = getattr(e, "code", 500)  # 兼容 SQLAlchemy 异常用法
                 msg = getattr(e, "msg", str(e))
                 status = StatusType.disable
@@ -84,29 +91,29 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
             route = request.scope.get("route")
             summary = route.summary or "" if route else ""
 
-            try:
-                # 此信息来源于 JWT 认证中间件
-                username = request.user.username
-            except AttributeError:
-                username = None
+            # try:
+            #     # 此信息来源于 JWT 认证中间件
+            #     username = request.user.username
+            # except AttributeError:
+            #     username = None
 
             # 日志记录
             logger.debug(f"接口摘要：[{summary}]")
-            logger.debug(f"请求地址：[{ctx.ip}]")
+            logger.debug(f"请求地址：[{ctx.ip or 'unknown'}]")
             logger.debug(f"请求参数：{args}")
 
             # 日志创建
             opera_log_in = CreateOperaLogParam(
-                trace_id=get_request_trace_id(),
-                username=username,
+                trace_id=get_request_trace_id(request),
+                username="",
                 method=method,
                 title=summary,
                 path=path,
-                ip=ctx.ip,
+                ip=ctx.ip or "unknown",
                 country=ctx.country,
                 region=ctx.region,
                 city=ctx.city,
-                user_agent=ctx.user_agent,
+                user_agent=ctx.user_agent or "unknown",
                 os=ctx.os,
                 browser=ctx.browser,
                 device=ctx.device,
@@ -115,7 +122,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 code=str(code),
                 msg=msg,
                 cost_time=elapsed,  # 可能和日志存在微小差异（可忽略）
-                opera_time=ctx.start_time,
+                opera_time=ctx.start_time or datetime.now(),
             )
             await self.opera_log_queue.put(opera_log_in)
 

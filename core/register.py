@@ -4,14 +4,13 @@ from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi_limiter import FastAPILimiter
 from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
-
-from core.cache import Cache, CustomKeyMaker, RedisBackend
+from starlette_context.middleware import ContextMiddleware
+from starlette_context import plugins
 from core.config import config as settings
 from core.database.redis import redis_client
 from core.database.session import create_tables
@@ -23,6 +22,7 @@ from core.fastapi.middlewares import (
     SQLAlchemyMiddleware,
 )
 from core.fastapi.middlewares.opera_log_middleware import OperaLogMiddleware
+from core.fastapi.middlewares.access_middleware import AccessMiddleware
 from core.log import logger, set_custom_logfile, setup_logging
 from core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
@@ -68,6 +68,7 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 def init_listeners(app_: FastAPI) -> None:
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
+        logger.error(f"自定义异常: {exc.message}")
         return JSONResponse(
             status_code=exc.code,
             content={"error_code": exc.error_code, "message": exc.message},
@@ -82,15 +83,6 @@ def init_listeners(app_: FastAPI) -> None:
             content={"message": "Internal Server Error"},
         )
 
-    @app_.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        # 记录校验异常详情（不需要完整堆栈）
-        logger.error(f"请求参数校验异常: {exc.errors()}")
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Unprocessable Entity", "errors": exc.errors()},
-        )
-
 
 def on_auth_error(request: Request, exc: Exception):
     status_code, error_code, message = 401, None, str(exc)
@@ -103,11 +95,6 @@ def on_auth_error(request: Request, exc: Exception):
         status_code=status_code,
         content={"error_code": error_code, "message": message},
     )
-
-
-def init_cache() -> None:
-    "暂时没用"
-    Cache.init(backend=RedisBackend(), key_maker=CustomKeyMaker())
 
 
 def register_app() -> FastAPI:
@@ -161,6 +148,22 @@ def register_middleware(app: FastAPI) -> None:
     :param app: FastAPI 应用实例
     :return:
     """
+    # Context middleware - 必须在最前面，确保其他中间件可以访问上下文
+    app.add_middleware(ContextMiddleware, plugins=[
+        plugins.CorrelationIdPlugin(),
+        plugins.RequestIdPlugin(),
+        plugins.ForwardedForPlugin(),
+        plugins.UserAgentPlugin(),
+    ],
+    default_error_response=JSONResponse(
+            content={'code': 400, 'msg': 'BAD_REQUEST', 'data': None},
+            status_code=400,
+        ),
+    )
+
+    # Trace ID
+    app.add_middleware(CorrelationIdMiddleware, validator=False)
+
     if settings.MIDDLEWARE_CORS:
         (
             app.add_middleware(
@@ -171,23 +174,24 @@ def register_middleware(app: FastAPI) -> None:
                 allow_headers=["*"],
             ),
         )
-    # Opera log
-    # 暂时禁用以定位500来源
-    # app.add_middleware(OperaLogMiddleware)
+
+    # Response logger
+    app.add_middleware(ResponseLoggerMiddleware)
+
+    # Access log - temporarily disabled
+    # app.add_middleware(AccessMiddleware)  # Disabled as it causes issues with /docs
+
+    # Database
+    app.add_middleware(SQLAlchemyMiddleware)
+
     # JWT auth
     app.add_middleware(
         AuthenticationMiddleware,
         backend=AuthBackend(),
         on_error=on_auth_error,
     )
-    app.add_middleware(SQLAlchemyMiddleware)
-    # Access log
-    # app.add_middleware(AccessMiddleware)  # Disabled as it causes issues with /docs
-
-    app.add_middleware(ResponseLoggerMiddleware)  # Re-enabled since it's not the issue
-
-    # Trace ID
-    app.add_middleware(CorrelationIdMiddleware, validator=False)
+    # TODO: Opera log middleware temporarily disabled due to user access issues
+    # app.add_middleware(OperaLogMiddleware)
 
 
 def register_router(app: FastAPI) -> None:
