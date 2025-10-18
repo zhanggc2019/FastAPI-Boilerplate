@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import Session, declarative_base
 from sqlalchemy.sql.expression import Delete, Insert, Update
 
-from core.common.model import MappedBase
 from core.config import config
 from core.log import logger
 
@@ -111,7 +110,6 @@ async def create_tables() -> None:
     print("开始创建数据库表...")
 
     # 导入所有模型，确保它们被注册到 Base.metadata 中
-    from app import models
     from core.database import Base
 
     # 打印 Base 的元数据信息

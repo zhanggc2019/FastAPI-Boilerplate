@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from core.log import logger
+from fastapi.responses import JSONResponse
 from fastapi_limiter import FastAPILimiter
 from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
@@ -23,9 +22,8 @@ from core.fastapi.middlewares import (
     ResponseLoggerMiddleware,
     SQLAlchemyMiddleware,
 )
-from core.fastapi.middlewares.access_middleware import AccessMiddleware
 from core.fastapi.middlewares.opera_log_middleware import OperaLogMiddleware
-from core.log import set_custom_logfile, setup_logging
+from core.log import logger, set_custom_logfile, setup_logging
 from core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
 

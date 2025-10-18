@@ -47,10 +47,9 @@ class AccessMiddleware(BaseHTTPMiddleware):
         if request.method != "OPTIONS":
             logger.debug("<-- 请求结束")
 
-            client_host = getattr(request.client, 'host', 'unknown') if request.client else 'unknown'
+            client_host = getattr(request.client, "host", "unknown") if request.client else "unknown"
             logger.info(
-                f"{client_host: <15} | {request.method: <8} | {response.status_code: <6} | "
-                f"{path} | {elapsed:.3f}ms",
+                f"{client_host: <15} | {request.method: <8} | {response.status_code: <6} | {path} | {elapsed:.3f}ms",
             )
 
         return response

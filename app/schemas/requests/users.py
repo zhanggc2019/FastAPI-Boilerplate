@@ -3,7 +3,7 @@
 import re
 from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, field_validator, StringConstraints
+from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
 
 
 class RegisterUserRequest(BaseModel):

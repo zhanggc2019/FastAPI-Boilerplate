@@ -1,5 +1,3 @@
-import pytest
-
 from core.security.password import PasswordHandler
 
 
@@ -12,7 +10,7 @@ def test_password_hashing():
 def test_password_verification():
     password = "password"
     hashed_password = PasswordHandler.hash(password)
-    assert PasswordHandler.verify(hashed_password, password) == True
+    assert PasswordHandler.verify(hashed_password, password)
 
     incorrect_password = "wrong_password"
-    assert PasswordHandler.verify(hashed_password, incorrect_password) == False
+    assert not PasswordHandler.verify(hashed_password, incorrect_password)

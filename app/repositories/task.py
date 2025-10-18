@@ -41,5 +41,5 @@ class TaskRepository(BaseRepository[Task]):
         :return: The updated task.
         """
         task = await self.get_by("id", task_id)
-        setattr(task, "is_completed", completed)
+        task.is_completed = completed
         return task

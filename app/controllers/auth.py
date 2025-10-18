@@ -1,14 +1,14 @@
-from pydantic import EmailStr
 import httpx
+from pydantic import EmailStr
 
 from app.models import User
 from app.repositories import UserRepository
 from app.schemas.extras.token import Token
+from core.config import config
 from core.controller import BaseController
 from core.database import Propagation, Transactional
 from core.exceptions import BadRequestException, UnauthorizedException
 from core.security import JWTHandler, PasswordHandler
-from core.config import config
 
 
 class AuthController(BaseController[User]):

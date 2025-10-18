@@ -5,16 +5,16 @@ from fastapi.responses import RedirectResponse
 
 from app.controllers import AuthController, UserController
 from app.models.user import User
+from app.schemas.extras.oauth import OAuthLogin
 from app.schemas.extras.token import Token
 from app.schemas.requests.users import LoginUserRequest, RegisterUserRequest
 from app.schemas.responses.users import UserResponse
-from app.schemas.extras.oauth import OAuthLogin
+from core.config import config
 from core.factory import Factory
 from core.fastapi.dependencies import AuthenticationRequired
 from core.fastapi.dependencies.current_user import get_current_user
 from core.fastapi.dependencies.permissions import Permissions
 from core.permissions import BasePermission
-from core.config import config
 
 user_router = APIRouter()
 

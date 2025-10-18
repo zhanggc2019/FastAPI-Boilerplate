@@ -48,7 +48,7 @@ def run_migrations_offline():
     Calls to context.execute() here emit the given string to the
     script output.
     """
-    url = config.get_main_option("sqlalchemy.url")
+    config.get_main_option("sqlalchemy.url")
     context.configure(
         url=app_config.POSTGRES_URL,
         target_metadata=target_metadata,
