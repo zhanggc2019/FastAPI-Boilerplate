@@ -4,9 +4,9 @@ from typing import Generator
 
 import pytest
 import pytest_asyncio
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
 import core.database.transactional as transactional
 from app.models import Base

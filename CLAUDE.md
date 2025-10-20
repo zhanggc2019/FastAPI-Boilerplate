@@ -146,7 +146,7 @@ Key configuration files:
 - **Formatting**: Black + iSort (120 character line length)
 - **Linting**: Pylint + Ruff
 - **Type checking**: Pyright (disabled in current config)
-- **Python version**: 3.11+
+- **Python version**: 3.12+
 
 ## Request Processing Pipeline
 

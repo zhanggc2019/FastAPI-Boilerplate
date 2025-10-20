@@ -19,7 +19,7 @@ This boilerplate follows a layered architecture that includes a model layer, a r
 
 ### Features
 
-- Python 3.11+ support
+- Python 3.12+ support
 - SQLAlchemy 2.0+ support
 - Asynchoronous capabilities
 - Database migrations using Alembic
@@ -38,7 +38,7 @@ This boilerplate follows a layered architecture that includes a model layer, a r
 
 You need following to run this project:
 
-- Python 3.11
+- Python 3.12
 - [Docker with Docker Compose](https://docs.docker.com/compose/install/)
 - [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
 

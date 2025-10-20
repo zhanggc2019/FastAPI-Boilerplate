@@ -1,9 +1,8 @@
 from functools import reduce
 from typing import Any, Generic, Type, TypeVar
 
-from sqlalchemy import Select, func
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.expression import select
 
 from core.database import Base
 

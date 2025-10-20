@@ -19,7 +19,7 @@
 
 ### 功能特性
 
-- Python 3.11+ 支持
+- Python 3.12+ 支持
 - SQLAlchemy 2.0+ 支持
 - 异步编程能力
 - 使用 Alembic 进行数据库迁移
@@ -38,7 +38,7 @@
 
 运行此项目需要以下工具：
 
-- Python 3.11
+- Python 3.12
 - [Docker 和 Docker Compose](https://docs.docker.com/compose/install/)
 - [uv](https://github.com/astral-sh/uv) - 快速的 Python 包安装器和解析器
 

@@ -21,7 +21,6 @@ from core.fastapi.middlewares import (
     ResponseLoggerMiddleware,
     SQLAlchemyMiddleware,
 )
-from core.fastapi.middlewares.access_middleware import AccessMiddleware
 from core.fastapi.middlewares.opera_log_middleware import OperaLogMiddleware
 from core.log import logger, set_custom_logfile, setup_logging
 from core.utils.health_check import ensure_unique_route_names, http_limit_callback
@@ -68,6 +67,7 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 def init_listeners(app_: FastAPI) -> None:
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
+        logger.error(f"自定义异常: {exc.message}")
         return JSONResponse(
             status_code=exc.code,
             content={"error_code": exc.error_code, "message": exc.message},
@@ -80,15 +80,6 @@ def init_listeners(app_: FastAPI) -> None:
         return JSONResponse(
             status_code=500,
             content={"message": "Internal Server Error"},
-        )
-
-    @app_.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        # 记录校验异常详情（不需要完整堆栈）
-        logger.error(f"请求参数校验异常: {exc.errors()}")
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Unprocessable Entity", "errors": exc.errors()},
         )
 
 

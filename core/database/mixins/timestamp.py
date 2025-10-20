@@ -6,11 +6,11 @@ from sqlalchemy.ext.declarative import declared_attr
 
 class TimestampMixin:
     @declared_attr
-    def created_at(cls):
+    def created_at(self):
         return Column(DateTime, default=func.now(), nullable=False)
 
     @declared_attr
-    def updated_at(cls):
+    def updated_at(self):
         return Column(
             DateTime,
             default=func.now(),

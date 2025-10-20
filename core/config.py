@@ -20,7 +20,7 @@ class Config(BaseSettings):
     # FastAPI
     FASTAPI_API_V1_PATH: str = "/api/v1"
     FASTAPI_TITLE: str = "FastAPI Best Boilerplate"
-    FASTAPI_DESCRIPTION: str = "FastAPI Best Boilerplate"
+    FASTAPI_DESCRIPTION: str = "FastAPI 脚手架"
     FASTAPI_DOCS_URL: str = "/docs"
     FASTAPI_REDOC_URL: str = "/redoc"
     FASTAPI_OPENAPI_URL: str | None = "/openapi"

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from starlette_context.ctx import _Context, context
+from starlette_context.errors import ContextDoesNotExistError
 
 
 class TypedContextProtocol(Protocol):
@@ -23,10 +24,18 @@ class TypedContextProtocol(Protocol):
 
 class TypedContext(TypedContextProtocol, _Context):
     def __getattr__(self, name: str) -> Any:
-        return context.get(name)
+        try:
+            return context.get(name)
+        except ContextDoesNotExistError:
+            # Context not available (outside request cycle)
+            return None
 
     def __setattr__(self, name: str, value: Any) -> None:
-        context[name] = value
+        try:
+            context[name] = value
+        except ContextDoesNotExistError:
+            # Context not available (outside request cycle), ignore silently
+            pass
 
 
 ctx = TypedContext()
