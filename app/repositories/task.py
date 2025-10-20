@@ -1,5 +1,8 @@
+from sqlalchemy import Select
+from sqlalchemy.orm import joinedload
+
 from app.models import Task
-from app.repositories.base_imports import BaseRepository, Select, joinedload
+from core.repository import BaseRepository
 
 
 class TaskRepository(BaseRepository[Task]):

@@ -4,15 +4,13 @@ from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from core.log import logger
+from fastapi.responses import JSONResponse
 from fastapi_limiter import FastAPILimiter
 from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
-from core.cache import Cache, CustomKeyMaker, RedisBackend
 from core.config import config as settings
 from core.database.redis import redis_client
 from core.database.session import create_tables
@@ -25,7 +23,7 @@ from core.fastapi.middlewares import (
 )
 from core.fastapi.middlewares.access_middleware import AccessMiddleware
 from core.fastapi.middlewares.opera_log_middleware import OperaLogMiddleware
-from core.log import set_custom_logfile, setup_logging
+from core.log import logger, set_custom_logfile, setup_logging
 from core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
 
@@ -95,6 +93,13 @@ def init_listeners(app_: FastAPI) -> None:
 
 
 def on_auth_error(request: Request, exc: Exception):
+    """
+    认证错误处理函数
+
+    :param request: FastAPI 请求对象
+    :param exc: 异常对象
+    :return: JSON响应
+    """
     status_code, error_code, message = 401, None, str(exc)
     if isinstance(exc, CustomException):
         status_code = int(exc.code)
@@ -105,11 +110,6 @@ def on_auth_error(request: Request, exc: Exception):
         status_code=status_code,
         content={"error_code": error_code, "message": message},
     )
-
-
-def init_cache() -> None:
-    "暂时没用"
-    Cache.init(backend=RedisBackend(), key_maker=CustomKeyMaker())
 
 
 def register_app() -> FastAPI:
@@ -160,35 +160,49 @@ def register_middleware(app: FastAPI) -> None:
     """
     注册中间件（执行顺序从下往上）
 
+    中间件执行顺序（从外到内）：
+    1. CorrelationIdMiddleware - 最外层，为每个请求生成追踪ID
+    2. CORSMiddleware - 处理跨域请求，应该在最外层
+    3. ResponseLoggerMiddleware - 记录响应日志
+    4. AccessMiddleware - 访问日志，记录所有访问尝试（包括未认证的请求）
+    5. OperaLogMiddleware - 操作日志，在认证之后记录用户操作
+    6. AuthenticationMiddleware - JWT认证
+    7. SQLAlchemyMiddleware - 数据库会话管理，最内层
+
     :param app: FastAPI 应用实例
     :return:
     """
-    if settings.MIDDLEWARE_CORS:
-        (
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            ),
-        )
-    # Opera log
-    # 暂时禁用以定位500来源
-    # app.add_middleware(OperaLogMiddleware)
-    # JWT auth
+    # 1. 数据库会话中间件 - 最内层，确保每个请求都有独立的数据库会话
+    app.add_middleware(SQLAlchemyMiddleware)
+
+    # 2. JWT认证中间件 - 在数据库会话之后，因为认证可能需要查询数据库
     app.add_middleware(
         AuthenticationMiddleware,
         backend=AuthBackend(),
         on_error=on_auth_error,
     )
-    app.add_middleware(SQLAlchemyMiddleware)
-    # Access log
-    # app.add_middleware(AccessMiddleware)  # Disabled as it causes issues with /docs
 
-    app.add_middleware(ResponseLoggerMiddleware)  # Re-enabled since it's not the issue
+    # 3. 操作日志中间件 - 在认证之后，因为需要获取用户信息记录操作日志
+    app.add_middleware(OperaLogMiddleware)
 
-    # Trace ID
+    # 4. 访问日志中间件 - 在认证之前，记录所有访问尝试（包括未认证的请求）
+    # 这样可以追踪所有访问行为，包括失败的认证尝试
+    app.add_middleware(AccessMiddleware)
+
+    # 5. 响应日志中间件 - 记录响应信息
+    app.add_middleware(ResponseLoggerMiddleware)
+
+    # 6. CORS中间件 - 应该在外层，处理跨域请求
+    if settings.MIDDLEWARE_CORS:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    # 7. 追踪ID中间件 - 最外层，为每个请求生成唯一的追踪ID
     app.add_middleware(CorrelationIdMiddleware, validator=False)
 
 
