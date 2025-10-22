@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from fastapi_limiter import FastAPILimiter
 from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
@@ -72,7 +72,7 @@ def init_listeners(app_: FastAPI) -> None:
     @app_.exception_handler(CustomException)
     async def custom_exception_handler(request: Request, exc: CustomException):
         logger.error(f"自定义异常: {exc.message}")
-        return JSONResponse(
+        return ORJSONResponse(
             status_code=exc.code,
             content={"error_code": exc.error_code, "message": exc.message},
         )
@@ -81,7 +81,7 @@ def init_listeners(app_: FastAPI) -> None:
     async def unhandled_exception_handler(request: Request, exc: Exception):
         # 记录未处理异常的完整堆栈
         logger.opt(exception=exc).error("未处理异常")
-        return JSONResponse(
+        return ORJSONResponse(
             status_code=500,
             content={"message": "Internal Server Error"},
         )
@@ -101,7 +101,7 @@ def on_auth_error(request: Request, exc: Exception):
         error_code = exc.error_code
         message = exc.message
 
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=status_code,
         content={"error_code": error_code, "message": message},
     )
@@ -118,6 +118,7 @@ def register_app() -> FastAPI:
         redoc_url=settings.FASTAPI_REDOC_URL,
         openapi_url=settings.FASTAPI_OPENAPI_URL,
         lifespan=register_init,
+        default_response_class=ORJSONResponse
     )
 
     # 注册组件
