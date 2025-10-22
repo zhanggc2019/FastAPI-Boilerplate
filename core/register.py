@@ -10,8 +10,9 @@ from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
+from core.cache import Cache, CustomKeyMaker, RedisBackend
+from core.cache.redis_backend import redis_backend
 from core.config import config as settings
-from core.database.redis import redis_client
 from core.database.session import create_tables
 from core.exceptions import CustomException
 from core.fastapi.middlewares import (
@@ -42,12 +43,15 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"创建数据库表时出错: {e}")
 
     # 初始化 redis
-    await redis_client.open()
+    await redis_backend.open()
+
+    # 初始化缓存
+    Cache.init(backend=RedisBackend, key_maker=CustomKeyMaker)
 
     # 初始化 limiter（暂时禁用）
     try:
         await FastAPILimiter.init(
-            redis=redis_client,
+            redis=redis_backend.redis,
             prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
             http_callback=http_limit_callback,
         )
@@ -61,7 +65,7 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # 关闭 redis 连接
-    await redis_client.aclose()
+    await redis_backend.aclose()
 
 
 def init_listeners(app_: FastAPI) -> None:
