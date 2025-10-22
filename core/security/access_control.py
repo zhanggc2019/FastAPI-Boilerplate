@@ -24,31 +24,31 @@ class Principal:
 @dataclass(frozen=True)
 class SystemPrincipal(Principal):
     def __init__(self, value: str, *args, **kwargs) -> None:
-        super().__init__(key="system", value=value, *args, **kwargs)
+        super().__init__(key="system", value=value)
 
 
 @dataclass(frozen=True)
 class UserPrincipal(Principal):
     def __init__(self, value: str, *args, **kwargs) -> None:
-        super().__init__(key="user", value=value, *args, **kwargs)
+        super().__init__(key="user", value=value)
 
 
 @dataclass(frozen=True)
 class RolePrincipal(Principal):
     def __init__(self, value: str, *args, **kwargs) -> None:
-        super().__init__(key="role", value=value, *args, **kwargs)
+        super().__init__(key="role", value=value)
 
 
 @dataclass(frozen=True)
 class ItemPrincipal(Principal):
     def __init__(self, value: str, *args, **kwargs) -> None:
-        super().__init__(key="item", value=value, *args, **kwargs)
+        super().__init__(key="item", value=value)
 
 
 @dataclass(frozen=True)
 class ActionPrincipal(Principal):
     def __init__(self, value: str, *args, **kwargs) -> None:
-        super().__init__(key="action", value=value, *args, **kwargs)
+        super().__init__(key="action", value=value)
 
 
 Everyone = SystemPrincipal(value="everyone")
@@ -79,7 +79,9 @@ class AccessControl:
         self.permission_exception = permission_exception
 
     def __call__(self, permissions: str):
-        def _permission_dependency(principals=Depends(self.user_principals_getter)):
+        def _permission_dependency(principals=None):
+            if principals is None:
+                principals = Depends(self.user_principals_getter)
             assert_access = functools.partial(self.assert_access, principals, permissions)
             return assert_access
 

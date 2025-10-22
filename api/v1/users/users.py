@@ -111,5 +111,8 @@ async def oauth_callback(provider: str, code: str):
     # In a real application, you would exchange the code for an access token
     # and then redirect to your frontend with the token or set a cookie
     return {
-        "message": f"OAuth callback received for {provider} with code {code}. In a real application, you would exchange this code for an access token."
+        "message": (
+            f"OAuth callback received for {provider} with code {code}. "
+            "In a real application, you would exchange this code for an access token."
+        )
     }

@@ -82,12 +82,6 @@ class TestJWTHandler:
         assert isinstance(decoded, dict)
 
     @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
-    def test_decode_error(self, mock_token, mock_handler):
-        with pytest.raises(JWTDecodeError):
-            with patch.object(jwt, "decode", side_effect=JWTError):
-                mock_handler.decode(mock_token)
-
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_decode_expired_error(self, mock_handler):
         with pytest.raises(JWTDecodeError):
             with patch.object(jwt, "decode", side_effect=JWTError):

@@ -105,3 +105,9 @@ extend-select = [
 
 # 设置严重等级
 extend-ignore = []
+
+# 每个文件的特定规则
+[tool.ruff.lint.per-file-ignores]
+"migrations/env.py" = ["E402"]  # 允许migrations文件中的模块级导入不在文件顶部
+"core/fastapi/dependencies/*" = ["B008"]  # 允许FastAPI依赖注入中的函数调用
+"api/v1/*" = ["B008"]  # 允许API路由中的FastAPI依赖注入

@@ -4,9 +4,12 @@
 
 import time
 from collections import defaultdict, deque
-from typing import Dict, Optional
-from fastapi import Request, Response
+from typing import Dict
+
+from fastapi import Request
+
 from core.log import logger
+
 
 class MemoryRateLimiter:
     """内存限流器"""
@@ -51,6 +54,7 @@ class MemoryRateLimiter:
             ip = request.client.host if request.client else "unknown"
 
         return f"rate_limit:{ip}"
+
 
 # 创建全局内存限流器实例
 memory_limiter = MemoryRateLimiter()

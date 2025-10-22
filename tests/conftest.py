@@ -28,7 +28,7 @@ print(f"Using test database URL: {TEST_DATABASE_URL}")
 
 
 @pytest.fixture(scope="session")
-def event_loop(request) -> Generator:  # noqa: indirect usage
+def event_loop(request) -> Generator:  # noqa: F401
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()

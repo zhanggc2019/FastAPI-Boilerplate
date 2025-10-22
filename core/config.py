@@ -60,11 +60,10 @@ class Config(BaseSettings):
         default=PostgresDsn("postgresql+asyncpg://user:password@127.0.0.1:5432/db-name"),
         validation_alias="POSTGRES_URL",
     )
-    # 注释掉原来的 REDIS_URL 行
-    # REDIS_URL: RedisDsn = Field(default=RedisDsn("redis://localhost:6379/7"), validation_alias="REDIS_URL")
     RELEASE_VERSION: str = "0.1"
     SHOW_SQL_ALCHEMY_QUERIES: int = 0
     DATABASE_POOL_ECHO: int = 0
+    # jwt 配置
     SECRET_KEY: str = "super-secret-key"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
@@ -74,6 +73,7 @@ class Config(BaseSettings):
     REDIS_PORT: int
     REDIS_PASSWORD: str
     REDIS_DATABASE: int
+    REDIS_TIMEOUT: int = 5
 
     # .env RabbitMQ/Celery
     RABBITMQ_HOST: str = "localhost"
@@ -81,9 +81,6 @@ class Config(BaseSettings):
     RABBITMQ_USER: str = "rabbit"
     RABBITMQ_PASSWORD: str = "password"
     RABBITMQ_VHOST: str = "/"
-
-    # Redis
-    REDIS_TIMEOUT: int = 5
 
     # 请求限制配置
     REQUEST_LIMITER_REDIS_PREFIX: str = "fastapi:limiter"

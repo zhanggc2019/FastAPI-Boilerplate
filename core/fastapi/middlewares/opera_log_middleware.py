@@ -8,6 +8,7 @@ from fastapi import Response
 from starlette.datastructures import UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette_context.errors import ContextDoesNotExistError
 
 from app.models.opera_log import CreateOperaLogParam
 from core.common.context import ctx
@@ -16,7 +17,6 @@ from core.common.queue import batch_dequeue
 from core.common.utils import get_request_trace_id
 from core.config import config as settings
 from core.log import logger
-from starlette_context.errors import ContextDoesNotExistError
 
 
 class OperaLogMiddleware(BaseHTTPMiddleware):

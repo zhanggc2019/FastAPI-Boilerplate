@@ -1,1 +1,3 @@
-from .datetime import *
+from .datetime import utcnow
+
+__all__ = ["utcnow"]

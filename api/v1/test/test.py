@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Request, Depends
-from loguru import logger
+from fastapi import APIRouter, Depends, Request
 from fastapi_limiter.depends import RateLimiter
+from loguru import logger
 
 test_router = APIRouter()
 
@@ -25,7 +25,7 @@ async def rate_limit_test(request: Request):
 
     return {
         "message": "测试接口调用成功",
-        "data": {"test_field": "这是一个测试数据",  "current_ip": client_ip},
+        "data": {"test_field": "这是一个测试数据", "current_ip": client_ip},
         "status": "success",
     }
 
