@@ -6,7 +6,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from core.common.pagination import DependsPagination, PageData, create_links
@@ -18,7 +18,7 @@ pagination_router = APIRouter()
 # 模拟数据模型
 class DemoItem(BaseModel):
     """演示数据模型"""
-    
+
     id: int
     name: str
     description: str
@@ -27,7 +27,7 @@ class DemoItem(BaseModel):
 # 响应模型
 class DemoItemSchema(BaseModel):
     """演示项响应模型"""
-    
+
     id: int
     name: str
     description: str
@@ -48,28 +48,28 @@ async def demo_pagination(
 ):
     """
     分页功能演示接口
-    
+
     演示如何使用项目的分页组件实现标准的分页查询
-    
+
     Args:
         pagination: 分页参数依赖注入
-        
+
     Returns:
         包含分页数据的标准响应
     """
     # 生成模拟数据
     demo_items = await generate_demo_data()
-    
+
     # 模拟数据库查询（实际项目中这里会是真实的数据库查询）
     # 这里使用简单的列表切片来模拟分页
     page = pagination.page
     size = pagination.size
     start_idx = (page - 1) * size
     end_idx = start_idx + size
-    
+
     # 获取当前页数据
     current_page_items = demo_items[start_idx:end_idx]
-    
+
     # 转换为响应模型
     items = [
         DemoItemSchema(
@@ -79,7 +79,7 @@ async def demo_pagination(
         )
         for item in current_page_items
     ]
-    
+
     # 使用分页组件包装数据
     total_pages = (len(demo_items) + size - 1) // size
     links = create_links(
@@ -88,7 +88,7 @@ async def demo_pagination(
         next={"page": page + 1, "size": size} if page < total_pages else None,
         prev={"page": page - 1, "size": size} if page > 1 else None,
     ).model_dump()
-    
+
     page_data = PageData(
         items=items,
         total=len(demo_items),
@@ -97,7 +97,7 @@ async def demo_pagination(
         total_pages=total_pages,
         links=links,
     )
-    
+
     return {
         "code": 200,
         "msg": "分页查询成功",
@@ -111,33 +111,33 @@ async def sqlalchemy_pagination_demo(
 ):
     """
     SQLAlchemy 分页演示接口
-    
+
     演示如何结合 SQLAlchemy 查询使用分页组件
-    
+
     Args:
         pagination: 分页参数依赖注入
-        
+
     Returns:
         包含分页数据的标准响应
     """
     # 在实际项目中，这里会是真实的 SQLAlchemy 查询
     # 例如：select_stmt = select(User).where(User.is_active == True)
-    
+
     # 由于这是演示，我们使用模拟数据
     demo_items = await generate_demo_data()
-    
+
     # 模拟 SQLAlchemy 查询结果
     # 在实际项目中，这里会使用 paginate 函数：
     # page_data = await paginate(db, select_stmt, params=pagination)
-    
+
     # 模拟分页结果
     page = pagination.page
     size = pagination.size
     start_idx = (page - 1) * size
     end_idx = start_idx + size
-    
+
     current_page_items = demo_items[start_idx:end_idx]
-    
+
     # 转换为响应模型
     items = [
         DemoItemSchema(
@@ -147,7 +147,7 @@ async def sqlalchemy_pagination_demo(
         )
         for item in current_page_items
     ]
-    
+
     # 手动构建分页数据（实际项目中会使用 paginate 函数自动处理）
     page_data = PageData(
         items=items,
@@ -162,7 +162,7 @@ async def sqlalchemy_pagination_demo(
             "prev": {"page": page - 1, "size": size} if page > 1 else None,
         }
     )
-    
+
     return {
         "code": 200,
         "msg": "SQLAlchemy 分页查询成功",
@@ -178,36 +178,36 @@ async def custom_pagination_demo(
 ):
     """
     自定义分页参数演示接口
-    
+
     演示如何手动处理分页参数，适用于需要额外过滤条件的场景
-    
+
     Args:
         page: 页码（从1开始）
         size: 每页数量（1-200）
         search: 搜索关键词
-        
+
     Returns:
         包含分页数据的标准响应
     """
     # 参数验证
     page = max(1, page)
     size = max(1, min(200, size))
-    
+
     # 生成模拟数据
     demo_items = await generate_demo_data()
-    
+
     # 如果有搜索条件，过滤数据
     if search:
         demo_items = [
-            item for item in demo_items 
+            item for item in demo_items
             if search.lower() in item.name.lower() or search.lower() in item.description.lower()
         ]
-    
+
     # 计算分页
     start_idx = (page - 1) * size
     end_idx = start_idx + size
     current_page_items = demo_items[start_idx:end_idx]
-    
+
     # 转换为响应模型
     items = [
         DemoItemSchema(
@@ -217,7 +217,7 @@ async def custom_pagination_demo(
         )
         for item in current_page_items
     ]
-    
+
     # 构建分页数据
     page_data = PageData(
         items=items,
@@ -232,7 +232,7 @@ async def custom_pagination_demo(
             "prev": {"page": page - 1, "size": size} if page > 1 else None,
         }
     )
-    
+
     return {
         "code": 200,
         "msg": f"自定义分页查询成功{'（含搜索）' if search else ''}",

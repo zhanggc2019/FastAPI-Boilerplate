@@ -92,7 +92,6 @@ select = [
     "F",     # Pyflakes - 包含未定义名称检查
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
-    "I",     # isort
     "B",     # flake8-bugbear
     "N",     # pep8-naming
 ]

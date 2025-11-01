@@ -31,8 +31,8 @@ def reset_session_context(context: Token) -> None:
 
 
 engines = {
-    "writer": create_async_engine(config.postgres_url_str, pool_recycle=3600),
-    "reader": create_async_engine(config.postgres_url_str, pool_recycle=3600),
+    "writer": create_async_engine(config.postgres_url_str, **config.database_pool_config),
+    "reader": create_async_engine(config.postgres_url_str, **config.database_pool_config),
 }
 
 
@@ -63,19 +63,14 @@ def create_async_engine_and_session(url: str | URL) -> tuple[AsyncEngine, async_
     :return:
     """
     try:
-        # 数据库引擎
+        # 数据库引擎 - 使用基于环境的优化配置
+        pool_config = config.database_pool_config
         engine = create_async_engine(
             url,
             echo=config.SHOW_SQL_ALCHEMY_QUERIES,
             echo_pool=config.DATABASE_POOL_ECHO,
             future=True,
-            # 中等并发
-            pool_size=10,  # 低：- 高：+
-            max_overflow=20,  # 低：- 高：+
-            pool_timeout=30,  # 低：+ 高：-
-            pool_recycle=3600,  # 低：+ 高：-
-            pool_pre_ping=True,  # 低：False 高：True
-            pool_use_lifo=False,  # 低：False 高：True
+            **pool_config  # 使用基于环境的连接池配置
         )
     except Exception as e:
         logger.error("❌ 数据库链接失败 {}", e)

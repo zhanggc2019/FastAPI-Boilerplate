@@ -63,8 +63,47 @@ class Config(BaseSettings):
     RELEASE_VERSION: str = "0.1"
     SHOW_SQL_ALCHEMY_QUERIES: int = 0
     DATABASE_POOL_ECHO: int = 0
-    # jwt 配置
-    SECRET_KEY: str = "super-secret-key"
+
+    # 数据库连接池配置 - 基于环境动态调整
+    DATABASE_POOL_SIZE: int = Field(default=10, validation_alias="DATABASE_POOL_SIZE")
+    DATABASE_MAX_OVERFLOW: int = Field(default=20, validation_alias="DATABASE_MAX_OVERFLOW")
+    DATABASE_POOL_TIMEOUT: int = Field(default=30, validation_alias="DATABASE_POOL_TIMEOUT")
+    DATABASE_POOL_RECYCLE: int = Field(default=3600, validation_alias="DATABASE_POOL_RECYCLE")
+    DATABASE_POOL_PRE_PING: bool = Field(default=True, validation_alias="DATABASE_POOL_PRE_PING")
+    DATABASE_POOL_USE_LIFO: bool = Field(default=False, validation_alias="DATABASE_POOL_USE_LIFO")
+
+    @property
+    def database_pool_config(self) -> dict:
+        """根据环境返回优化的数据库连接池配置"""
+        if self.ENVIRONMENT == EnvironmentType.PRODUCTION:
+            return {
+                "pool_size": max(self.DATABASE_POOL_SIZE, 20),  # 生产环境最小20
+                "max_overflow": max(self.DATABASE_MAX_OVERFLOW, 40),  # 生产环境最小40
+                "pool_timeout": max(self.DATABASE_POOL_TIMEOUT, 60),  # 生产环境最小60秒
+                "pool_recycle": min(self.DATABASE_POOL_RECYCLE, 3600),  # 生产环境最大1小时
+                "pool_pre_ping": True,  # 生产环境必须启用
+                "pool_use_lifo": True,  # 生产环境启用LIFO
+            }
+        elif self.ENVIRONMENT == EnvironmentType.TEST:
+            return {
+                "pool_size": min(self.DATABASE_POOL_SIZE, 5),  # 测试环境最大5
+                "max_overflow": min(self.DATABASE_MAX_OVERFLOW, 10),  # 测试环境最大10
+                "pool_timeout": min(self.DATABASE_POOL_TIMEOUT, 10),  # 测试环境最大10秒
+                "pool_recycle": self.DATABASE_POOL_RECYCLE,
+                "pool_pre_ping": self.DATABASE_POOL_PRE_PING,
+                "pool_use_lifo": False,  # 测试环境禁用LIFO
+            }
+        else:  # DEVELOPMENT
+            return {
+                "pool_size": self.DATABASE_POOL_SIZE,
+                "max_overflow": self.DATABASE_MAX_OVERFLOW,
+                "pool_timeout": self.DATABASE_POOL_TIMEOUT,
+                "pool_recycle": self.DATABASE_POOL_RECYCLE,
+                "pool_pre_ping": self.DATABASE_POOL_PRE_PING,
+                "pool_use_lifo": self.DATABASE_POOL_USE_LIFO,
+            }
+    # jwt 配置 - 强制从环境变量读取，移除硬编码默认值
+    SECRET_KEY: str = Field(..., validation_alias="JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
 

@@ -8,10 +8,13 @@ class CustomException(Exception):  # noqa: N818
     code = HTTPStatus.BAD_GATEWAY
     error_code = HTTPStatus.BAD_GATEWAY
     message = HTTPStatus.BAD_GATEWAY.description
+    detail = None
 
-    def __init__(self, message=None):
+    def __init__(self, message=None, detail=None):
         if message:
             self.message = message
+        if detail:
+            self.detail = detail
 
 
 class BadRequestException(CustomException):
@@ -48,6 +51,30 @@ class DuplicateValueException(CustomException):
     code = HTTPStatus.UNPROCESSABLE_ENTITY
     error_code = HTTPStatus.UNPROCESSABLE_ENTITY
     message = HTTPStatus.UNPROCESSABLE_ENTITY.description
+
+
+class ConflictException(CustomException):
+    code = HTTPStatus.CONFLICT
+    error_code = HTTPStatus.CONFLICT
+    message = HTTPStatus.CONFLICT.description
+
+
+class InternalServerException(CustomException):
+    code = HTTPStatus.INTERNAL_SERVER_ERROR
+    error_code = HTTPStatus.INTERNAL_SERVER_ERROR
+    message = HTTPStatus.INTERNAL_SERVER_ERROR.description
+
+
+class ServiceUnavailableException(CustomException):
+    code = HTTPStatus.SERVICE_UNAVAILABLE
+    error_code = HTTPStatus.SERVICE_UNAVAILABLE
+    message = HTTPStatus.SERVICE_UNAVAILABLE.description
+
+
+class CacheException(CustomException):
+    code = HTTPStatus.INTERNAL_SERVER_ERROR
+    error_code = 50001
+    message = "缓存操作失败"
 
 
 class HTTPError(HTTPException):

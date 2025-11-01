@@ -13,7 +13,7 @@ from core.log import logger
 
 class RedisBackend(BaseBackend):
     """Redis 后端实现，集成 Redis 客户端功能"""
-    
+
     def __init__(self) -> None:
         """初始化 Redis 客户端"""
         self.redis = Redis(

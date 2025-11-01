@@ -14,7 +14,7 @@ from core.cache import Cache, CustomKeyMaker, RedisBackend
 from core.cache.redis_backend import redis_backend
 from core.config import config as settings
 from core.database.session import create_tables
-from core.exceptions import CustomException
+from core.exceptions import CustomException, create_exception_handlers
 from core.fastapi.middlewares import (
     AuthBackend,
     AuthenticationMiddleware,
@@ -23,7 +23,7 @@ from core.fastapi.middlewares import (
 )
 from core.fastapi.middlewares.access_middleware import AccessMiddleware
 from core.fastapi.middlewares.opera_log_middleware import OperaLogMiddleware
-from core.log import logger, set_custom_logfile, setup_logging
+from core.log import set_custom_logfile, setup_logging
 from core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
 
@@ -69,22 +69,16 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def init_listeners(app_: FastAPI) -> None:
-    @app_.exception_handler(CustomException)
-    async def custom_exception_handler(request: Request, exc: CustomException):
-        logger.error(f"自定义异常: {exc.message}")
-        return ORJSONResponse(
-            status_code=exc.code,
-            content={"error_code": exc.error_code, "message": exc.message},
-        )
+    # 使用统一的异常处理器
+    exception_handlers = create_exception_handlers()
 
-    @app_.exception_handler(Exception)
-    async def unhandled_exception_handler(request: Request, exc: Exception):
-        # 记录未处理异常的完整堆栈
-        logger.opt(exception=exc).error("未处理异常")
-        return ORJSONResponse(
-            status_code=500,
-            content={"message": "Internal Server Error"},
-        )
+    for exc_class, handler_func in exception_handlers.items():
+        def create_handler(exc_class=exc_class, handler_func=handler_func):
+            @app_.exception_handler(exc_class)
+            async def exception_handler_wrapper(request: Request, exc: Exception):
+                return await handler_func(request, exc)
+            return exception_handler_wrapper
+        create_handler()
 
 
 def on_auth_error(request: Request, exc: Exception):
