@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 项目根目录
 BASE_PATH = Path(__file__).resolve().parent.parent
+print(f"项目根目录: {BASE_PATH}")
 
 
 class EnvironmentType(str, Enum):
