@@ -1,9 +1,9 @@
 from sqlalchemy import Boolean, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from core.models import BaseModel
-from core.permissions import BasePermission
-from core.security.access_control import (
+from app.models import BaseModel
+from app.core.permissions import BasePermission
+from app.core.security.access_control import (
     Allow,
     Authenticated,
     RolePrincipal,

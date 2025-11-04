@@ -97,7 +97,7 @@ check-format: ## Dry-run code formatter
 
 .PHONY: lint
 lint: ## Run linter
-	uv run pylint ./api ./app ./core
+	uv run pylint ./app ./tests
  
 .PHONY: format
 format: ## Run code formatter

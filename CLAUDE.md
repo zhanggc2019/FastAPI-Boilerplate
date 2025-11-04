@@ -68,14 +68,14 @@ make celery-worker
 
 This is a **layered FastAPI application** following clean architecture with four main layers:
 
-### Core Framework (`core/`)
+### Core Framework (`app/core/`)
 Contains boilerplate code and infrastructure:
-- **Configuration**: Centralized settings in `core/config.py` using Pydantic Settings
-- **Database**: SQLAlchemy 2.0+ with async support, session management in `core/database/`
-- **Security**: JWT authentication and row-level access control in `core/security/`
-- **Caching**: Redis implementation in `core/cache/`
-- **Factory**: Dependency injection system in `core/factory/`
-- **Repository Pattern**: Base repository in `core/repository/`
+- **Configuration**: Centralized settings in `app/core/config.py` using Pydantic Settings
+- **Database**: SQLAlchemy 2.0+ with async support, session management in `app/db/`
+- **Security**: JWT authentication and row-level access control in `app/core/security/`
+- **Caching**: Redis implementation in `app/core/cache/`
+- **Factory**: Dependency injection system in `app/core/factory/`
+- **Repository Pattern**: Base repository in `app/repositories/`
 
 ### Application Logic (`app/`)
 Business logic layer:
@@ -104,7 +104,7 @@ class UserRepository(BaseRepository[User]):
 ```
 
 ### Dependency Injection
-Repositories and controllers are injected through the `Factory` class in `core/factory/factory.py`.
+Repositories and services are injected through the `Factory` class in `app/core/factory/factory.py`.
 
 ### Session Management
 - **Automatic sessions**: Handled by middleware and `get_session` dependency
@@ -166,7 +166,7 @@ Key configuration files:
 - **Connection pooling** configured
 
 ### Model Definition
-Models inherit from `Base` in `core/database.py` and include:
+Models inherit from `Base` in `app/db/session.py` and include:
 - Table definitions with `__tablename__`
 - Column definitions with proper types
 - Relationships defined with SQLAlchemy relationships

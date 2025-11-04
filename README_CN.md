@@ -15,7 +15,7 @@
 
 ### 项目概述
 
-本项目模板采用分层架构，包含模型层、仓储层、控制器层和API层。其目录结构设计旨在将样板代码隔离在 `core` 目录中，该目录需要最少的关注，从而促进快速便捷的功能开发。项目的目录结构也非常可预测。该项目的主要目标是提供一个具有更好开发体验和现成功能的生产就绪模板。它还包含一些广泛使用的功能，如身份验证、授权、数据库迁移、类型检查等，这些将在[功能特性](#功能特性)部分详细讨论。
+本项目模板采用分层架构，包含模型层、仓储层、服务层和API层。其目录结构设计旨在将样板代码隔离在 `core` 目录中，该目录需要最少的关注，从而促进快速便捷的功能开发。项目的目录结构也非常可预测。该项目的主要目标是提供一个具有更好开发体验和现成功能的生产就绪模板。它还包含一些广泛使用的功能，如身份验证、授权、数据库迁移、类型检查等，这些将在[功能特性](#功能特性)部分详细讨论。
 
 ### 功能特性
 
@@ -86,16 +86,16 @@ pwsh scripts.ps1 start
 
 该项目设计为模块化和可扩展的。项目中有 3 个主要目录：
 
-1. `core`：此目录包含项目的核心部分。它包含大部分样板代码，如安全依赖、数据库连接、配置、中间件等。它还包含模型、仓储和控制器的基类。`core` 目录设计得尽可能精简，通常需要最少的关注。总的来说，`core` 目录设计得尽可能通用，可以在任何项目中使用。在构建额外功能时，你可能完全不需要修改此目录，除了在 `core/factory.py` 的 `Factory` 类中添加更多控制器。
-
-2. `app`：此目录包含实际的应用程序代码。它包含应用程序的模型、仓储、控制器和模式。这是你在构建功能时将花费大部分时间的目录。该目录有以下子目录：
-
-   - `models` 在这里添加新表
-   - `repositories` 为每个模型创建一个仓储。在这里添加模型的 CRUD 操作
-   - `controllers` 为应用程序的每个逻辑单元创建一个控制器。在这里添加应用程序的业务逻辑
-   - `schemas` 这里添加应用程序的模式。模式用于数据的验证和序列化/反序列化
-
-3. `api`：此目录包含应用程序的 API 层。它包含 API 路由器，是你添加 API 端点的地方。
+- `app/core`：负责跨领域的基础设施，如配置、日志、安全策略、中间件、缓存以及 FastAPI 启动逻辑。
+- `app/api`：承载按版本划分的 FastAPI 路由与依赖定义。
+- `app/services`：业务服务层，封装业务规则并协调仓储。
+- `app/repositories`：基于 SQLAlchemy 的数据访问层。
+- `app/models`：SQLAlchemy 模型定义。
+- `app/schemas`：Pydantic 请求/响应模型。
+- `app/db`：数据库配置、异步引擎/会话工厂与事务辅助工具。
+- `app/common`：通用领域工具（枚举、分页、数据结构、时区工具等）。
+- `app/worker`：Celery 启动配置与任务入口。
+- `docs/examples`：未默认挂载的示例路由。
 
 ### 高级用法
 
@@ -123,12 +123,12 @@ make migrate
 
 #### 行级访问控制
 
-该模板包含一个自定义的行级权限管理模块。它受到 [fastapi-permissions](https://github.com/holgi/fastapi-permissions) 的启发。它位于 `core/security/access_control.py`。你可以使用它为不同的模型强制执行不同的权限。该模块基于 `Principals` 和 `permissions` 运行。每个用户都有自己的 principal 集合，需要使用函数设置。检查 `core/fastapi/dependencies/permissions.py` 中的示例。然后这些 principal 用于检查用户的权限。权限需要在模型级别定义。检查 `app/models/user.py` 中的示例。然后你可以直接在路由中使用依赖，如果用户没有所需权限，它将引发 `HTTPException`。下面是一个不完整的示例：
+该模板包含一个自定义的行级权限管理模块。它受到 [fastapi-permissions](https://github.com/holgi/fastapi-permissions) 的启发。它位于 `app/core/security/access_control.py`。你可以使用它为不同的模型强制执行不同的权限。该模块基于 `Principals` 和 `permissions` 运行。每个用户都有自己的 principal 集合，需要使用函数设置。检查 `app/api/deps/permissions.py` 中的示例。然后这些 principal 用于检查用户的权限。权限需要在模型级别定义。检查 `app/models/user.py` 中的示例。然后你可以直接在路由中使用依赖，如果用户没有所需权限，它将引发 `HTTPException`。下面是一个不完整的示例：
 
 ```python
 from fastapi import APIRouter, Depends
-from core.security.access_control import AccessControl, UserPrincipal, RolePrincipal, Allow
-from core.database import Base
+from app.core.security.access_control import AccessControl, UserPrincipal, RolePrincipal, Allow
+from app.db import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -159,10 +159,10 @@ def get_user(user_id: int, user: User = get_user(user_id), assert_access = Permi
 
 #### 缓存
 
-你可以直接使用 `core.cache` 中的 `Cache.cached` 装饰器。示例
+你可以直接使用 `app.core.cache` 中的 `Cache.cached` 装饰器。示例
 
 ```python
-from core.cache import Cache
+from app.core.cache import Cache
 
 @Cache.cached(prefix="user", ttl=60)
 def get_user(user_id: int):
@@ -179,7 +179,7 @@ make celery-worker
 
 #### 会话管理
 
-会话已经由中间件和 `get_session` 依赖处理，后者通过 `core/factory.py` 中的 `Factory` 类中的 FastAPI 依赖注入注入到仓储中。还有 `Transactional` 装饰器，可用于包装需要在事务中执行的函数。示例：
+会话已经由中间件和 `get_session` 依赖处理，后者通过 `app/core/factory/factory.py` 中的 `Factory` 类中的 FastAPI 依赖注入注入到仓储中。还有 `Transactional` 装饰器，可用于包装需要在事务中执行的函数。示例：
 
 ```python
 @Transactional()
@@ -189,7 +189,7 @@ async def some_mutating_function():
 
 注意：装饰器已经处理了事务的提交和回滚。你不需要手动执行。
 
-如果对于任何情况你需要独立的会话，可以使用 `core.database` 中的 `standalone_session` 装饰器。示例：
+如果对于任何情况你需要独立的会话，可以使用 `app.db` 中的 `standalone_session` 装饰器。示例：
 
 ```python
 @standalone_session
@@ -199,12 +199,12 @@ async def do_something():
 
 #### 仓储模式
 
-该模板使用仓储模式。每个模型都有一个仓储，所有仓储都继承自 `core/repository` 中的 `base` 仓储。仓储位于 `app/repositories`。仓储在 `core/factory/factory.py` 中的 `Factory` 类内部注入到控制器中。
+该模板使用仓储模式。每个模型都有一个仓储，所有仓储都继承自 `app/repositories/base.py` 中的 `base` 仓储。仓储位于 `app/repositories`。仓储在 `app/core/factory/factory.py` 中的 `Factory` 类内部注入到服务层中。
 
 基础仓储有基本的 CRUD 操作。所有客户操作都可以添加到特定仓储。示例：
 
 ```python
-from core.repository import BaseRepository
+from app.repositories import BaseRepository
 from app.models.user import User
 from sqlalchemy.sql.expression import select
 
@@ -229,11 +229,11 @@ async def _join_tasks(self, query: Select) -> Select:
     return query.options(joinedload(User.tasks))
 ```
 
-#### 控制器
+#### 服务层
 
-与仓储类似，应用程序的每个逻辑单元都有一个控制器。控制器还有一个主仓储，它被注入其中。控制器位于 `app/controllers`。
+与仓储类似，应用程序的每个逻辑单元都有一个服务层组件。服务层拥有主要仓储依赖，并通过工厂注入。服务实现位于 `app/services`。
 
-这些控制器包含应用程序的所有业务逻辑。检查 `app/controllers/auth.py` 中的示例。
+这些服务组件包含应用程序的业务逻辑。可参考 `app/services/auth.py` 示例。
 
 #### 模式
 

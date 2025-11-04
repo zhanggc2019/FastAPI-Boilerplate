@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 
-from core.api_versioning import APIVersionManager, VersionedAPIRouter
-from core.config import settings
+from app.core.api_versioning import APIVersionManager, VersionedAPIRouter
+from app.core.config import settings
 
 
 class TestAPIVersioning:
@@ -99,12 +99,12 @@ class TestAPIVersioning:
         """测试版本弃用警告"""
 
         # 测试当前版本不触发警告
-        with patch("core.api_versioning.logger") as mock_logger:
+        with patch("app.core.api_versioning.logger") as mock_logger:
             version_manager.check_version_deprecation("v1")
             mock_logger.warning.assert_not_called()
 
         # 测试旧版本触发警告
-        with patch("core.api_versioning.logger") as mock_logger:
+        with patch("app.core.api_versioning.logger") as mock_logger:
             version_manager.check_version_deprecation("v0")
             mock_logger.warning.assert_called_once()
             call_args = mock_logger.warning.call_args[0]
@@ -203,7 +203,7 @@ class TestAPIVersioning:
     def test_version_middleware_integration(self, app):
         """测试版本中间件集成"""
 
-        from core.api_versioning import VersionMiddleware
+        from app.core.api_versioning import VersionMiddleware
 
         # 添加版本中间件
         version_manager = APIVersionManager()
@@ -231,7 +231,7 @@ class TestAPIVersioning:
     def test_version_header_in_response(self, app):
         """测试响应中的版本头"""
 
-        from core.api_versioning import VersionMiddleware
+        from app.core.api_versioning import VersionMiddleware
 
         version_manager = APIVersionManager()
         app.add_middleware(VersionMiddleware, version_manager=version_manager)
@@ -312,7 +312,7 @@ class TestAPIVersioning:
         """测试版本化路由弃用警告"""
 
         # 创建v1路由器（应该触发弃用警告）
-        with patch("core.api_versioning.logger") as mock_logger:
+        with patch("app.core.api_versioning.logger") as mock_logger:
             v1_router = VersionedAPIRouter(version="v0")
 
             @v1_router.get("/test")

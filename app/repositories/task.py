@@ -2,7 +2,7 @@ from sqlalchemy import Select
 from sqlalchemy.orm import joinedload
 
 from app.models import Task
-from core.repository import BaseRepository
+from app.repositories import BaseRepository
 
 
 class TaskRepository(BaseRepository[Task]):

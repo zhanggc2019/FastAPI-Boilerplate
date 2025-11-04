@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from core.security.access_control import (
+from app.core.security.access_control import (
     AccessControl,
     ActionPrincipal,
     Allow,

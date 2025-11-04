@@ -8,9 +8,9 @@ from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-import core.database.transactional as transactional
+import app.db.transactional as transactional
 from app.models import Base
-from core.config import config
+from app.core.config import config
 
 # Load environment variables from .env file
 load_dotenv(".env")

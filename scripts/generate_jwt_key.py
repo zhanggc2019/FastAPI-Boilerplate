@@ -36,7 +36,7 @@ def main():
     key = generate_jwt_key(args.length)
 
     if args.output == "env":
-        print(f"JWT_SECRET_KEY={key}")
+        print(f"SECRET_KEY={key}")
     else:
         print(key)
 

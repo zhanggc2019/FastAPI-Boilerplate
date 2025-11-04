@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from jose import JWTError, jwt
 
-from core.security.jwt import JWTDecodeError, JWTHandler
+from app.core.security.jwt import JWTDecodeError, JWTHandler
 
 
 class MockConfig:
@@ -55,13 +55,13 @@ def mock_handler(mock_config):
 
 
 class TestJWTHandler:
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
+    @patch("app.core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_encode(self, mock_payload, mock_handler):
         token = mock_handler.encode(mock_payload)
         assert token is not None
         assert isinstance(token, str)
 
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
+    @patch("app.core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_decode(self, mock_token, mock_payload, mock_handler):
         decoded = mock_handler.decode(mock_token)
         assert decoded is not None
@@ -69,19 +69,19 @@ class TestJWTHandler:
         assert decoded.pop("exp") is not None
         assert decoded == mock_payload
 
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
+    @patch("app.core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_decode_error(self, mock_token, mock_handler):
         with pytest.raises(JWTDecodeError):
             with patch.object(jwt, "decode", side_effect=JWTError):
                 mock_handler.decode(mock_token)
 
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
+    @patch("app.core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_decode_expired(self, mock_expired_token, mock_handler):
         decoded = mock_handler.decode_expired(mock_expired_token)
         assert decoded is not None
         assert isinstance(decoded, dict)
 
-    @patch("core.security.jwt.config", MagicMock(return_value=mock_config))
+    @patch("app.core.security.jwt.config", MagicMock(return_value=mock_config))
     def test_decode_expired_error(self, mock_handler):
         with pytest.raises(JWTDecodeError):
             with patch.object(jwt, "decode", side_effect=JWTError):

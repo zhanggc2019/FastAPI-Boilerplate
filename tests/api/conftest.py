@@ -5,8 +5,8 @@ import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from core.factory.factory import get_session
-from core.server import create_app
+from app.db import get_session
+from app.core.server import create_app
 
 
 @pytest.fixture(scope="session")

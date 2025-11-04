@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
-from core.exceptions import (
+from app.core.exceptions import (
     CustomException,
     BadRequestException,
     NotFoundException,
@@ -19,7 +19,7 @@ from core.exceptions import (
     InternalServerException,
     ServiceUnavailableException,
 )
-from core.exceptions.handler import ExceptionHandler, ErrorResponse, create_exception_handlers
+from app.core.exceptions.handler import ExceptionHandler, ErrorResponse, create_exception_handlers
 
 
 class TestExceptionHandling:
@@ -346,7 +346,7 @@ class TestExceptionHandling:
     async def test_exception_logging(self):
         """测试异常日志记录"""
 
-        with patch("core.exceptions.handler.logger") as mock_logger:
+        with patch("app.core.exceptions.handler.logger") as mock_logger:
             handler = ExceptionHandler()
 
             exc = BadRequestException("Test logging")

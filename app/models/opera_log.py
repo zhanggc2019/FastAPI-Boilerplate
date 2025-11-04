@@ -7,10 +7,10 @@ from sqlalchemy.dialects.mysql import JSON, LONGTEXT
 from sqlalchemy.dialects.postgresql import TEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.common.enums import StatusType
-from core.common.model import TimeZone, id_key
-from core.common.schema import SchemaBase
-from core.database import Base
+from app.common.enums import StatusType
+from app.common.model import TimeZone, id_key
+from app.common.schema import SchemaBase
+from app.db import Base
 
 
 class OperaLogSchemaBase(SchemaBase):

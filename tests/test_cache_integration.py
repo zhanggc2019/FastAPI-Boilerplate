@@ -3,8 +3,8 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from datetime import datetime
 
-from core.cache import cache_warmer, cache_monitor, cache_stats_collector, enhanced_cache, smart_cache_warmer
-from core.exceptions import CacheException
+from app.core.cache import cache_warmer, cache_monitor, cache_stats_collector, enhanced_cache, smart_cache_warmer
+from app.core.exceptions import CacheException
 from tests.enhanced_test_data import generate_test_user, generate_test_task
 
 

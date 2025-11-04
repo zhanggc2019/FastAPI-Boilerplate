@@ -15,7 +15,7 @@ A scalable and production ready boilerplate for FastAPI
 
 ### Project Overview
 
-This boilerplate follows a layered architecture that includes a model layer, a repository layer, a controller layer, and an API layer. Its directory structure is designed to isolate boilerplate code within the core directory, which requires minimal attention, thereby facilitating quick and easy feature development. The directory structure is also generally very predictable. The project's primary objective is to offer a production-ready boilerplate with a better developer experience and readily available features. It also has some widely used features like authentication, authorization, database migrations, type checking, etc which are discussed in detail in the [Features](#features) section.
+This boilerplate follows a layered architecture that includes a model layer, a repository layer, a service layer, and an API layer. Its directory structure is designed to isolate boilerplate code within the core directory, which requires minimal attention, thereby facilitating quick and easy feature development. The directory structure is also generally very predictable. The project's primary objective is to offer a production-ready boilerplate with a better developer experience and readily available features. It also has some widely used features like authentication, authorization, database migrations, type checking, etc which are discussed in detail in the [Features](#features) section.
 
 ### Features
 
@@ -84,18 +84,18 @@ The server should now be running on `http://localhost:8000` and the API document
 
 ### Usage Guide
 
-The project is designed to be modular and scalable. There are 3 main directories in the project:
+The project is designed to be modular and scalable. All runtime code now lives under `app/` and is organised by responsibility:
 
-1. `core`: This directory contains the central part of this project. It contains most of the boiler plate code like security dependencies, database connections, configuration, middlewares etc. It also contains the base classes for the models, repositories, and controllers. The `core` directory is designed to be as minimal as possible and usually requires minimal attention. Overall, the `core` directory is designed to be as generic as possible and can be used in any project. While building additional feature you may not need to modify this directory at all except for adding more controllers to the `Factory` class in `core/factory.py`.
-
-2. `app`: This directory contains the actual application code. It contains the models, repositories, controllers, and schemas for the application. This is the directory you will be spending most of your time in while building features. The directory has following sub-directories:
-
-   - `models` Here is where you add new tables
-   - `repositories` For each model, you need to create a repository. This is where you add the CRUD operations for the model.
-   - `controllers` For each logical unit of the application, you need to create a controller. This is where you add the business logic for the application.
-   - `schemas` This is where you add the schemas for the application. The schemas are used for validation and serialization/deserialization of the data.
-
-3. `api`: This directory contains the API layer of the application. It contains the API router, it is where you add the API endpoints.
+- `app/core`: cross-cutting infrastructure such as configuration, logging, security, middlewares, caching, and the FastAPI bootstrap helpers.
+- `app/api`: versioned FastAPI routers and dependency definitions.
+- `app/services`: business services that encapsulate domain logic and orchestrate repositories.
+- `app/repositories`: persistence layer built on top of SQLAlchemy sessions.
+- `app/models`: SQLAlchemy models registered on the shared metadata.
+- `app/schemas`: Pydantic request/response contracts.
+- `app/db`: database configuration, async engine/session factories, and transactional helpers.
+- `app/common`: shared domain helpers (enums, pagination, dataclasses, timezone utilities, etc.).
+- `app/worker`: Celery bootstrap and task entrypoints.
+- `docs/examples`: optional demo routers that are not mounted by default.
 
 ### Advanced Usage
 
@@ -123,12 +123,12 @@ The authentication used is basic implementation of JWT with bearer token. When t
 
 #### Row Level Access Control
 
-The boilerplate contains a custom row level permissions management module. It is inspired by [fastapi-permissions](https://github.com/holgi/fastapi-permissions). It is located in `core/security/access_control.py`. You can use this to enforce different permissions for different models. The module operates based on `Principals` and `permissions`. Every user has their own set of principals which need to be set using a function. Check `core/fastapi/dependencies/permissions.py` for an example. The principals are then used to check the permissions for the user. The permissions need to be defined at the model level. Check `app/models/user.py` for an example. Then you can use the dependency directly in the route to raise a `HTTPException` if the user does not have the required permissions. Below is an incomplete example:
+The boilerplate contains a custom row level permissions management module. It is inspired by [fastapi-permissions](https://github.com/holgi/fastapi-permissions). It is located in `app/core/security/access_control.py`. You can use this to enforce different permissions for different models. The module operates based on `Principals` and `permissions`. Every user has their own set of principals which need to be set using a function. Check `app/api/deps/permissions.py` for an example. The principals are then used to check the permissions for the user. The permissions need to be defined at the model level. Check `app/models/user.py` for an example. Then you can use the dependency directly in the route to raise a `HTTPException` if the user does not have the required permissions. Below is an incomplete example:
 
 ```python
 from fastapi import APIRouter, Depends
-from core.security.access_control import AccessControl, UserPrincipal, RolePrincipal, Allow
-from core.database import Base
+from app.core.security.access_control import AccessControl, UserPrincipal, RolePrincipal, Allow
+from app.db import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -160,10 +160,10 @@ def get_user(user_id: int, user: User = get_user(user_id), assert_access = Permi
 
 #### Caching
 
-You can directly use the `Cache.cached` decorator from `core.cache`. Example
+You can directly use the `Cache.cached` decorator from `app.core.cache`. Example
 
 ```python
-from core.cache import Cache
+from app.core.cache import Cache
 
 @Cache.cached(prefix="user", ttl=60)
 def get_user(user_id: int):
@@ -180,7 +180,7 @@ make celery-worker
 
 #### Session Management
 
-The sessions are already handled by the middleware and `get_session` dependency which injected into the repositories through fastapi dependency injection inside the `Factory` class in `core/factory.py`. There is also `Transactional` decorator which can be used to wrap the functions which need to be executed in a transaction. Example:
+The sessions are already handled by the middleware and `get_session` dependency which injected into the repositories through fastapi dependency injection inside the `Factory` class in `app/core/factory/factory.py`. There is also `Transactional` decorator which can be used to wrap the functions which need to be executed in a transaction. Example:
 
 ```python
 @Transactional()
@@ -190,7 +190,7 @@ async def some_mutating_function():
 
 Note: The decorator already handles the commit and rollback of the transaction. You do not need to do it manually.
 
-If for any case you need an isolated sessions you can use `standalone_session` decorator from `core.database`. Example:
+If for any case you need an isolated sessions you can use `standalone_session` decorator from `app.db`. Example:
 
 ```python
 @standalone_session
@@ -200,12 +200,12 @@ async def do_something():
 
 #### Repository Pattern
 
-The boilerplate uses the repository pattern. Every model has a repository and all of them inherit `base` repository from `core/repository`. The repositories are located in `app/repositories`. The repositories are injected into the controllers inside the `Factory` class in `core/factory/factory.py.py`.
+The boilerplate uses the repository pattern. Every model has a repository and all of them inherit `base` repository from `app/repositories/base.py`. The repositories are located in `app/repositories`. The repositories are injected into the services inside the `Factory` class in `app/core/factory/factory.py`.
 
 The base repository has the basic crud operations. All customer operations can be added to the specific repository. Example:
 
 ```python
-from core.repository import BaseRepository
+from app.repositories import BaseRepository
 from app.models.user import User
 from sqlalchemy.sql.expression import select
 
@@ -231,11 +231,11 @@ async def _join_tasks(self, query: Select) -> Select:
     return query.options(joinedload(User.tasks))
 ```
 
-#### Controllers
+#### Services
 
-Kind of to repositories, every logical unit of the application has a controller. The controller also has a primary repository which is injected into it. The controllers are located in `app/controllers`.
+Kind of to repositories, every logical unit of the application has a service layer component. Each service depends on a primary repository injected through the factory. The services are located in `app/services`.
 
-These controllers contain all the business logic of the application. Check `app/controllers/auth.py` for an example.
+These services contain all the business logic of the application. Check `app/services/auth.py` for an example.
 
 #### Schemas
 

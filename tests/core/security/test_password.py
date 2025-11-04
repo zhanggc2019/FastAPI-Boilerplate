@@ -1,4 +1,4 @@
-from core.security.password import PasswordHandler
+from app.core.security.password import PasswordHandler
 
 
 def test_password_hashing():

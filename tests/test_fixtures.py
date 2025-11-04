@@ -11,10 +11,12 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api import api_router
-from core.cache import enhanced_cache, cache_warmer, cache_monitor
-from core.db import Base, async_engine, async_session
-from core.exceptions import (
+from app.api import router as api_router
+from app.core.cache import enhanced_cache, cache_warmer, cache_monitor
+from app.core.cache.redis_backend import redis_backend
+from app.core.config import config
+from app.db.session import Base, create_async_engine_and_session
+from app.core.exceptions import (
     ResourceNotFoundException,
     BadRequestException,
     UnauthorizedException,
@@ -24,8 +26,11 @@ from core.exceptions import (
     InternalServerException,
     ServiceUnavailableException,
 )
-from core.redis import redis_client
 from tests.enhanced_test_data import test_data_manager, generate_test_user, generate_test_task
+
+async_engine, async_session_factory = create_async_engine_and_session(config.postgres_url_str)
+async_session = async_session_factory
+redis_client = redis_backend.redis
 
 
 # 配置日志

@@ -3,7 +3,7 @@ import pytest_asyncio
 from faker import Faker
 
 from app.models import User
-from core.repository import BaseRepository
+from app.repositories import BaseRepository
 
 fake = Faker()
 

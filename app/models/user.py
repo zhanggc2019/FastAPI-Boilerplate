@@ -1,9 +1,9 @@
 from sqlalchemy import Boolean, Column, Unicode
 from sqlalchemy.orm import relationship
 
-from core.models import BaseModel
-from core.permissions import BasePermission
-from core.security.access_control import Allow, Everyone, RolePrincipal, UserPrincipal
+from app.models import BaseModel
+from app.core.permissions import BasePermission
+from app.core.security.access_control import Allow, Everyone, RolePrincipal, UserPrincipal
 
 
 class User(BaseModel):
