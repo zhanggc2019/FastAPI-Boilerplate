@@ -53,8 +53,6 @@ class Config(BaseSettings):
 
     # 静态资源目录
     STATIC_DIR: Path = BASE_PATH / "static"
-
-    DEBUG: int = 0
     DEFAULT_LOCALE: str = "zh_CN"
     # 时间配置
     DATETIME_TIMEZONE: str = "Asia/Shanghai"
