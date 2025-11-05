@@ -217,4 +217,18 @@ def register_page(app: FastAPI) -> None:
     :param app: FastAPI 应用实例
     :return:
     """
+    from fastapi import Request
+    from fastapi.responses import HTMLResponse
+
+    # 登录页面路由
+    @app.get("/login", response_class=HTMLResponse)
+    async def login_page(request: Request):
+        """登录页面"""
+        from pathlib import Path
+        login_page_path = settings.STATIC_DIR / "login" / "index.html"
+        if login_page_path.exists():
+            with open(login_page_path, "r", encoding="utf-8") as f:
+                return f.read()
+        return HTMLResponse("<h1>Login page not found</h1>", status_code=404)
+
     add_pagination(app)
