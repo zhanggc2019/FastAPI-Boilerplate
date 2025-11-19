@@ -28,25 +28,25 @@ class AuthService(BaseService[User]):
     async def register(self, email: EmailStr, password: str, username: str) -> User:
         # 验证输入参数
         if not email or not password or not username:
-            raise BadRequestException("Email, password, and username are required")
+            raise BadRequestException("邮箱、密码和用户名是必需的")
 
         if len(password) < 8:
-            raise BadRequestException("Password must be at least 8 characters long")
+            raise BadRequestException("密码长度至少为8个字符")
 
         if len(username) < 3 or len(username) > 30:
-            raise BadRequestException("Username must be between 3 and 30 characters")
+            raise BadRequestException("用户名长度必须在3到30个字符之间")
 
-        # Check if user exists with email
+        # 检查邮箱是否已存在
         user = await self.user_repository.get_by_email(email)
 
         if user:
-            raise UserAlreadyExistsException("User already exists with this email")
+            raise UserAlreadyExistsException("该邮箱已被注册")
 
-        # Check if user exists with username
+        # 检查用户名是否已存在
         user = await self.user_repository.get_by_username(username)
 
         if user:
-            raise UserAlreadyExistsException("User already exists with this username")
+            raise UserAlreadyExistsException("该用户名已被使用")
 
         password = PasswordHandler.hash(password)
 
@@ -61,19 +61,19 @@ class AuthService(BaseService[User]):
     async def login(self, email: EmailStr, password: str) -> Token:
         # 验证输入参数
         if not email or not password:
-            raise BadRequestException("Email and password are required")
+            raise BadRequestException("邮箱和密码是必需的")
 
         user = await self.user_repository.get_by_email(email)
 
         if not user:
-            raise InvalidCredentialsException("Invalid credentials")
+            raise InvalidCredentialsException("用户名或密码错误")
 
         if not PasswordHandler.verify(user.password, password):
-            raise InvalidCredentialsException("Invalid credentials")
+            raise InvalidCredentialsException("用户名或密码错误")
 
         # 检查用户状态
         if not user.is_active:
-            raise UnauthorizedException("User account is not active", "ACCOUNT_INACTIVE")
+            raise UnauthorizedException("用户账户未激活", "ACCOUNT_INACTIVE")
 
         return Token(
             access_token=JWTHandler.encode(payload={"user_id": user.id}),
@@ -84,7 +84,7 @@ class AuthService(BaseService[User]):
         token = JWTHandler.decode(access_token)
         refresh_token_decoded = JWTHandler.decode(refresh_token)
         if refresh_token_decoded.get("sub") != "refresh_token":
-            raise UnauthorizedException("Invalid refresh token")
+            raise UnauthorizedException("无效的刷新令牌")
 
         return Token(
             access_token=JWTHandler.encode(payload={"user_id": token.get("user_id")}),
@@ -102,7 +102,7 @@ class AuthService(BaseService[User]):
         elif provider == "alipay":
             user_info = await self._get_alipay_user_info(token)
         else:
-            raise BadRequestException("Unsupported OAuth provider")
+            raise BadRequestException("不支持的OAuth提供商")
 
         # Check if user exists with email
         user = await self.user_repository.get_by_email(user_info["email"])
@@ -143,7 +143,7 @@ class AuthService(BaseService[User]):
 
                 # 验证必需字段
                 if not user_info.get("id") or not user_info.get("email"):
-                    raise ExternalServiceException("Invalid Google user info response")
+                    raise ExternalServiceException("无效的Google用户信息响应")
 
                 return {
                     "id": user_info["id"],
@@ -183,11 +183,11 @@ class AuthService(BaseService[User]):
                 primary_email = next((email["email"] for email in emails if email["primary"]), None)
 
                 if not primary_email:
-                    raise ExternalServiceException("No primary email found for GitHub user")
+                    raise ExternalServiceException("未找到GitHub用户的主邮箱")
 
                 # 验证必需字段
                 if not user_info.get("id"):
-                    raise ExternalServiceException("Invalid GitHub user info response")
+                    raise ExternalServiceException("无效的GitHub用户信息响应")
 
                 return {
                     "id": user_info["id"],
@@ -243,7 +243,7 @@ class AuthService(BaseService[User]):
 
                 # 验证必需字段
                 if not user_info.get("openid"):
-                    raise ExternalServiceException("Invalid WeChat user info response")
+                    raise ExternalServiceException("无效的微信用户信息响应")
 
                 return {
                     "id": user_info["openid"],
@@ -263,16 +263,16 @@ class AuthService(BaseService[User]):
             # In a real implementation, you would need to use the Alipay SDK
             # to exchange the auth_code for an access token and then get user info
 
-            # This is a simplified implementation that just validates the auth_code format
+            # 这是一个简化的实现，仅验证授权码格式
             if not auth_code or len(auth_code) < 10:
-                raise BadRequestException("Invalid Alipay auth code")
+                raise BadRequestException("无效的支付宝授权码")
 
             # 模拟支付宝API调用，添加超时控制
             async with httpx.AsyncClient(timeout=10.0):
                 # 模拟支付宝API验证
                 # 在实际实现中，这里应该调用支付宝的真实API
                 if not auth_code.startswith("auth_"):
-                    raise ExternalServiceException("Invalid Alipay auth code format")
+                    raise ExternalServiceException("无效的支付宝授权码格式")
 
                 # 模拟成功响应
                 return {

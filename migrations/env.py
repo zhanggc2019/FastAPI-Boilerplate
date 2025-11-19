@@ -12,9 +12,18 @@ parent_dir = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(parent_dir)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-# 导入项目模块
-from app.models import Base
+# 直接导入Base和必要的模型，避免循环导入
+from sqlalchemy.orm import declarative_base
+from app.db.session import engines
 from app.core.config import config as app_config
+
+# 创建Base对象
+Base = declarative_base()
+
+# 导入模型以确保它们被注册到Base.metadata
+from app.models.user import User
+from app.models.task import Task
+from app.models.opera_log import OperaLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

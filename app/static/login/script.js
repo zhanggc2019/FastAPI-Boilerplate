@@ -1,5 +1,5 @@
 // 全局配置
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = '/v1';
 
 // 消息提示管理
 const MessageManager = {
@@ -84,6 +84,33 @@ const ApiClient = {
             const data = await response.json();
 
             if (!response.ok) {
+                // 检查是否有字段验证错误
+                if (data.field_errors && typeof data.field_errors === 'object') {
+                    // 构建字段错误消息
+                    let errorMessages = [];
+                    for (const [field, errors] of Object.entries(data.field_errors)) {
+                        // 翻译字段名称为中文
+                        const fieldMapping = {
+                            'email': '邮箱',
+                            'username': '用户名',
+                            'password': '密码',
+                            'password_confirm': '确认密码'
+                        };
+                        const fieldName = fieldMapping[field] || field;
+                        
+                        // 添加所有该字段的错误消息
+                        for (const error of errors) {
+                            errorMessages.push(`${fieldName}：${error.message}`);
+                        }
+                    }
+                    
+                    // 如果有字段错误，抛出包含这些错误的异常
+                    if (errorMessages.length > 0) {
+                        throw new Error(errorMessages.join('\n'));
+                    }
+                }
+                
+                // 否则抛出一般错误消息
                 throw new Error(data.message || '请求失败');
             }
 
@@ -256,7 +283,7 @@ async function handleRegister(event) {
     FormManager.setLoading(submitButton, true);
 
     try {
-        await ApiClient.post('/users/', {
+        await ApiClient.post('/users/register', {
             email,
             username,
             password

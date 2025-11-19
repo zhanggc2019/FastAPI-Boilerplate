@@ -4,7 +4,7 @@
 """
 
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
@@ -21,7 +21,7 @@ class ErrorResponse(BaseModel):
     success: bool = False
     code: int
     message: str
-    detail: Optional[str] = None
+    detail: Optional[Union[str, Dict[str, Any]]] = None
     request_id: Optional[str] = None
     path: Optional[str] = None
     method: Optional[str] = None
@@ -69,18 +69,138 @@ class ExceptionHandler:
         )
 
     @staticmethod
+    def _translate_error_message(message: str) -> str:
+        """将英文错误消息翻译为中文"""
+        # 常见的Pydantic错误消息映射
+        translations = {
+            # 邮箱验证错误
+            "value is not a valid email address": "邮箱格式无效",
+            "An email address must have an @-sign": "邮箱地址必须包含@符号",
+            
+            # 字符串长度错误
+            "ensure this value has at least": "确保此值至少有",
+            "characters": "个字符",
+            "ensure this value has at most": "确保此值最多有",
+            "String should have at least 8 characters": "密码长度至少为8个字符",
+            "String should have at most": "字符串长度最多",
+            "String should have at least": "字符串长度至少为",
+            
+            # 必填字段错误
+            "field required": "此字段为必填项",
+            "none is not an allowed value": "不允许为空值",
+            
+            # 类型错误
+            "value is not a valid boolean": "值不是有效的布尔值",
+            "value is not a valid integer": "值不是有效的整数",
+            "value is not a valid float": "值不是有效的浮点数",
+            "value is not a valid string": "值不是有效的字符串",
+            
+            # 数字范围错误
+            "ensure this value is greater than": "确保此值大于",
+            "ensure this value is greater than or equal to": "确保此值大于或等于",
+            "ensure this value is less than": "确保此值小于",
+            "ensure this value is less than or equal to": "确保此值小于或等于",
+        }
+        
+        # 应用翻译
+        result = message
+        for en_msg, zh_msg in translations.items():
+            result = result.replace(en_msg, zh_msg)
+        
+        return result
+    
+    @staticmethod
     async def handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
-        """处理Pydantic验证错误"""
+        """处理Pydantic验证错误并返回中文错误消息"""
+        # 获取详细错误信息
+        error_details = []
+        
+        # 检查是否是RequestValidationError类型，尝试获取结构化错误信息
+        if hasattr(exc, 'errors'):
+            for error in exc.errors():
+                # 构建错误详情，确保字段信息正确
+                loc = error.get("loc", [])
+                field_name = loc[-1] if loc else None
+                
+                # 确保ctx字段是可JSON序列化的
+                ctx = error.get("ctx", {})
+                if ctx and not isinstance(ctx, dict):
+                    ctx = str(ctx)
+                elif isinstance(ctx, dict):
+                    # 确保ctx字典中的值都是可序列化的
+                    serializable_ctx = {}
+                    for key, value in ctx.items():
+                        try:
+                            # 尝试将值转换为字符串
+                            serializable_ctx[key] = str(value)
+                        except:
+                            serializable_ctx[key] = "[unserializable]"
+                    ctx = serializable_ctx
+                
+                # 获取原始错误消息并翻译为中文
+                original_message = error.get("msg", "")
+                translated_message = ExceptionHandler._translate_error_message(original_message)
+                
+                # 针对密码字段的特殊处理，使其错误消息更加具体
+                if field_name == "password" and "字符串长度至少为" in translated_message:
+                    translated_message = translated_message.replace("字符串长度至少为", "密码长度至少为")
+                
+                # 对于body字段的错误，确保显示正确的字段名称，避免input字段值混淆
+                # 特别处理password和username字段的验证错误
+                if field_name in ["password", "username"]:
+                    # 为这些敏感字段创建更清晰的错误信息，不直接显示输入值
+                    error_detail = {
+                        "type": error.get("type"),
+                        "field": field_name,
+                        "message": translated_message,
+                        # 避免显示敏感字段的实际值
+                        "input": "[已隐藏]" if field_name == "password" else str(error.get("input", "")),
+                    }
+                else:
+                    # 其他字段保持原样，但确保所有值都是可序列化的
+                    error_detail = {
+                        "type": error.get("type"),
+                        "field": field_name,
+                        "message": translated_message,
+                        "input": str(error.get("input", "")),
+                    }
+                
+                # 只在非空且可序列化的情况下添加ctx
+                if ctx:
+                    error_detail["ctx"] = ctx
+                
+                error_details.append(error_detail)
+        
+        # 记录验证错误日志
         logger.warning(
             f"验证错误 - 路径: {request.url.path}, 方法: {request.method}, "
-            f"错误: {str(exc)}"
+            f"错误: {str(error_details) if error_details else str(exc)}"
         )
 
-        error_response = ExceptionHandler.create_error_response(
+        # 创建更清晰的错误响应，确保前端能正确获取字段级别的错误信息
+        # 重新组织错误信息，以字段名为键
+        field_errors = {}
+        for err in error_details:
+            field_name = err.get("field")
+            if field_name:
+                if field_name not in field_errors:
+                    field_errors[field_name] = []
+                field_errors[field_name].append({
+                    "message": err.get("message"),
+                    "type": err.get("type")
+                })
+
+        # 简化响应格式，确保所有数据都是JSON可序列化的
+        error_response = ErrorResponse(
+            success=False,
             code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             message="请求参数验证失败",
-            detail=str(exc),
-            request=request
+            detail={
+                "field_errors": field_errors
+            },
+            request_id=getattr(request.state, 'request_id', None) if request else None,
+            path=str(request.url.path) if request else None,
+            method=request.method if request else None
         )
 
         return JSONResponse(

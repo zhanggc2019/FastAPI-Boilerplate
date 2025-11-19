@@ -100,20 +100,7 @@ async def get_session():
         await session.close()
 
 
-async def create_tables() -> None:
-    """创建数据库表（动态方式）"""
-    print("开始创建数据库表...")
-
-    # 导入所有模型，确保它们被注册到 Base.metadata 中
-    from app.db import Base
-
-    # 打印 Base 的元数据信息
-    print(f"已注册的表: {list(Base.metadata.tables.keys())}")
-
-    # 使用 metadata 创建所有表
-    async with engines["writer"].begin() as conn:
-        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
-    print("数据库表创建完成")
+# create_tables 函数已移至 init_db.py 文件
 
 
 Base = declarative_base()

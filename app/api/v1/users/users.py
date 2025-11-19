@@ -10,7 +10,7 @@ from app.schemas.extras.token import Token
 from app.schemas.requests.users import LoginUserRequest, RegisterUserRequest
 from app.schemas.responses.users import UserResponse
 from app.core.config import config
-from app.core.factory import Factory
+from app.core.factory.factory import Factory
 from app.api.deps import AuthenticationRequired
 from app.api.deps.current_user import get_current_user
 from app.api.deps.permissions import Permissions
@@ -30,7 +30,7 @@ async def get_users(
     return [UserResponse.model_validate(user) for user in users]
 
 
-@user_router.post("/", status_code=201)
+@user_router.post("/register", status_code=201)
 async def register_user(
     register_user_request: RegisterUserRequest,
     auth_service: AuthService = Depends(Factory().get_auth_service),

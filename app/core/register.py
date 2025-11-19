@@ -13,7 +13,7 @@ from starlette.staticfiles import StaticFiles
 from app.core.cache import Cache, CustomKeyMaker, RedisBackend
 from app.core.cache.redis_backend import redis_backend
 from app.core.config import config as settings
-from app.db.session import create_tables
+from app.db.init_db import create_tables
 from app.core.exceptions import CustomException, create_exception_handlers
 from app.core.middlewares import (
     AuthBackend,
