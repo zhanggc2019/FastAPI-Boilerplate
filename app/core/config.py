@@ -18,6 +18,10 @@ class EnvironmentType(str, Enum):
 class Config(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
+    # Server
+    SERVER_HOST: str = Field(default="localhost", validation_alias="SERVER_HOST")
+    SERVER_PORT: int = Field(default=8000, validation_alias="SERVER_PORT")
+
     # FastAPI
     FASTAPI_API_V1_PATH: str = "/api/v1"
     FASTAPI_TITLE: str = "FastAPI Best Boilerplate"
@@ -131,22 +135,22 @@ class Config(BaseSettings):
     # OAuth settings
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/v1/users/oauth/google/callback"
+    GOOGLE_REDIRECT_URI: str = ""
 
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
-    GITHUB_REDIRECT_URI: str = "http://localhost:8000/v1/users/oauth/github/callback"
+    GITHUB_REDIRECT_URI: str = ""
 
     # WeChat OAuth settings
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
-    WECHAT_REDIRECT_URI: str = "http://localhost:8000/v1/users/oauth/wechat/callback"
+    WECHAT_REDIRECT_URI: str = ""
 
     # Alipay OAuth settings
     ALIPAY_APP_ID: str = ""
     ALIPAY_PRIVATE_KEY: str = ""
     ALIPAY_PUBLIC_KEY: str = ""
-    ALIPAY_REDIRECT_URI: str = "http://localhost:8000/v1/users/oauth/alipay/callback"
+    ALIPAY_REDIRECT_URI: str = ""
 
     OPERA_LOG_ENCRYPT_KEY_INCLUDE: list[str] = [  # 将加密接口入参参数对应的值
         "password",
@@ -184,6 +188,36 @@ class Config(BaseSettings):
         if self.REDIS_PASSWORD:
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DATABASE}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DATABASE}"
+
+    @property
+    def server_url(self) -> str:
+        """返回服务器完整URL"""
+        return f"http://{self.SERVER_HOST}:{self.SERVER_PORT}"
+
+    @property
+    def google_redirect_uri(self) -> str:
+        """返回Google OAuth回调URI"""
+        return self.GOOGLE_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/google/callback"
+
+    @property
+    def github_redirect_uri(self) -> str:
+        """返回GitHub OAuth回调URI"""
+        return self.GITHUB_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/github/callback"
+
+    @property
+    def wechat_redirect_uri(self) -> str:
+        """返回WeChat OAuth回调URI"""
+        return self.WECHAT_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/wechat/callback"
+
+    @property
+    def alipay_redirect_uri(self) -> str:
+        """返回Alipay OAuth回调URI"""
+        return self.ALIPAY_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/alipay/callback"
+
+    @property
+    def server_url(self) -> str:
+        """返回服务器完整URL"""
+        return f"http://{self.SERVER_HOST}:{self.SERVER_PORT}"
 
 
 config: Config = Config()

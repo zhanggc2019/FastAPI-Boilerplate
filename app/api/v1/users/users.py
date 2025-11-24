@@ -77,7 +77,7 @@ async def oauth_redirect(provider: str):
         return RedirectResponse(
             f"https://accounts.google.com/oauth/authorize?"
             f"client_id={config.GOOGLE_CLIENT_ID}&"
-            f"redirect_uri={config.GOOGLE_REDIRECT_URI}&"
+            f"redirect_uri={config.google_redirect_uri}&"
             f"response_type=code&"
             f"scope=openid email profile"
         )
@@ -85,14 +85,14 @@ async def oauth_redirect(provider: str):
         return RedirectResponse(
             f"https://github.com/login/oauth/authorize?"
             f"client_id={config.GITHUB_CLIENT_ID}&"
-            f"redirect_uri={config.GITHUB_REDIRECT_URI}&"
+            f"redirect_uri={config.github_redirect_uri}&"
             f"scope=user:email"
         )
     elif provider == "wechat":
         return RedirectResponse(
             f"https://open.weixin.qq.com/connect/qrconnect?"
             f"appid={config.WECHAT_APP_ID}&"
-            f"redirect_uri={config.WECHAT_REDIRECT_URI}&"
+            f"redirect_uri={config.wechat_redirect_uri}&"
             f"response_type=code&"
             f"scope=snsapi_login&"
             f"state=wechat_login"

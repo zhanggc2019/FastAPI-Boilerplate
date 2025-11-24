@@ -6,23 +6,14 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request
 from fastapi.responses import ORJSONResponse
 from fastapi_limiter import FastAPILimiter
-from fastapi_pagination import add_pagination
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
-
+from app.core.middlewares.access_middleware import AccessMiddleware
+from app.core.middlewares.opera_log_middleware import OperaLogMiddleware
 from app.core.cache import Cache, CustomKeyMaker, RedisBackend
 from app.core.cache.redis_backend import redis_backend
 from app.core.config import config as settings
-from app.db.init_db import create_tables
 from app.core.exceptions import CustomException, create_exception_handlers
-from app.core.middlewares import (
-    AuthBackend,
-    AuthenticationMiddleware,
-    ResponseLoggerMiddleware,
-    SQLAlchemyMiddleware,
-)
-from app.core.middlewares.access_middleware import AccessMiddleware
-from app.core.middlewares.opera_log_middleware import OperaLogMiddleware
 from app.core.logging import set_custom_logfile, setup_logging
 from app.core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
@@ -36,6 +27,7 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     :return:
     """
     # 创建数据库表
+    from app.db.init_db import create_tables
     try:
         await create_tables()
         print("数据库表创建成功")
@@ -121,7 +113,6 @@ def register_app() -> FastAPI:
     register_middleware(app)
     register_router(app)
     init_listeners(app)
-    register_page(app)
 
     return app
 
@@ -162,6 +153,14 @@ def register_middleware(app: FastAPI) -> None:
     :param app: FastAPI 应用实例
     :return:
     """
+    from app.core.middlewares import (
+        AuthBackend,
+        AuthenticationMiddleware,
+        ResponseLoggerMiddleware,
+        SQLAlchemyMiddleware,
+    )
+
+
     # 1. 数据库会话中间件 - 最内层，确保每个请求都有独立的数据库会话
     app.add_middleware(SQLAlchemyMiddleware)
 
@@ -209,26 +208,3 @@ def register_router(app: FastAPI) -> None:
     # Extra
     ensure_unique_route_names(app)
 
-
-def register_page(app: FastAPI) -> None:
-    """
-    注册分页查询功能
-
-    :param app: FastAPI 应用实例
-    :return:
-    """
-    from fastapi import Request
-    from fastapi.responses import HTMLResponse
-
-    # 登录页面路由
-    @app.get("/login", response_class=HTMLResponse)
-    async def login_page(request: Request):
-        """登录页面"""
-        from pathlib import Path
-        login_page_path = settings.STATIC_DIR / "login" / "index.html"
-        if login_page_path.exists():
-            with open(login_page_path, "r", encoding="utf-8") as f:
-                return f.read()
-        return HTMLResponse("<h1>Login page not found</h1>", status_code=404)
-
-    add_pagination(app)

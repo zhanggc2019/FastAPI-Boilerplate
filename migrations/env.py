@@ -13,17 +13,18 @@ sys.path.append(parent_dir)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 # 直接导入Base和必要的模型，避免循环导入
-from sqlalchemy.orm import declarative_base
+# 直接导入Base和必要的模型，避免循环导入
+from app.db import Base
 from app.db.session import engines
 from app.core.config import config as app_config
 
-# 创建Base对象
-Base = declarative_base()
+# 导入模型以确保它们被注册到Base.metadata
 
 # 导入模型以确保它们被注册到Base.metadata
 from app.models.user import User
 from app.models.task import Task
 from app.models.opera_log import OperaLog
+from app.models.api_key import ApiKey
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -59,7 +60,7 @@ def run_migrations_offline():
     """
     config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=app_config.POSTGRES_URL,
+        url=str(app_config.POSTGRES_URL),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -81,7 +82,7 @@ async def run_migrations_online():
     In this scenario we need to create an Engine
     and associate a connection with the context.
     """
-    connectable = create_async_engine(app_config.POSTGRES_URL, poolclass=pool.NullPool)
+    connectable = create_async_engine(str(app_config.POSTGRES_URL), poolclass=pool.NullPool)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

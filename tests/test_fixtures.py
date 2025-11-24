@@ -7,16 +7,20 @@ from typing import Any, AsyncGenerator, Dict, List
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
-from httpx import AsyncClient
+import pytest_asyncio
+from fastapi import FastAPI, Request
+from fastapi.responses import ORJSONResponse
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import router as api_router
 from app.core.cache import enhanced_cache, cache_warmer, cache_monitor
 from app.core.cache.redis_backend import redis_backend
 from app.core.config import config
+from app.core.middlewares import AuthBackend, AuthenticationMiddleware, SQLAlchemyMiddleware
 from app.db.session import Base, create_async_engine_and_session
 from app.core.exceptions import (
+    CustomException,
     ResourceNotFoundException,
     BadRequestException,
     UnauthorizedException,
@@ -70,7 +74,7 @@ async def setup_test_environment():
     await enhanced_cache.close()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """创建数据库会话"""
     async with async_engine.begin() as conn:
@@ -84,22 +88,42 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(scope="function")
+def on_error(request: Request, exc: Exception):
+    status_code, error_code, message = 401, None, str(exc)
+    if isinstance(exc, CustomException):
+        status_code = int(exc.code)
+        error_code = exc.error_code
+        message = exc.message
+
+    return ORJSONResponse(
+        status_code=status_code,
+        content={"error_code": error_code, "message": message},
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
 async def test_app() -> FastAPI:
     """创建测试应用实例"""
     test_app = FastAPI(title="Test App", version="1.0.0")
-    test_app.include_router(api_router)
+    test_app.add_middleware(SQLAlchemyMiddleware)
+    test_app.add_middleware(
+        AuthenticationMiddleware,
+        backend=AuthBackend(),
+        on_error=on_error,
+    )
+    test_app.include_router(api_router, prefix="/api")
     return test_app
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def async_client(test_app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
     """创建异步HTTP客户端"""
-    async with AsyncClient(app=test_app, base_url="http://test") as client:
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def authenticated_client(async_client: AsyncClient, test_user: Dict[str, Any]) -> AsyncClient:
     """创建已认证的客户端"""
     # 模拟登录获取token
@@ -117,7 +141,7 @@ async def authenticated_client(async_client: AsyncClient, test_user: Dict[str, A
 
 
 # 测试数据fixture
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_user() -> Dict[str, Any]:
     """创建测试用户"""
     user_data = generate_test_user()
@@ -125,7 +149,7 @@ async def test_user() -> Dict[str, Any]:
     return await test_data_manager.create_test_user(**user_data)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_users() -> List[Dict[str, Any]]:
     """创建多个测试用户"""
     users = []
@@ -137,14 +161,14 @@ async def test_users() -> List[Dict[str, Any]]:
     return users
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_task(test_user: Dict[str, Any]) -> Dict[str, Any]:
     """创建测试任务"""
     task_data = generate_test_task(author_id=test_user.get("id", 1))
     return await test_data_manager.create_test_task(author_id=test_user.get("id", 1), **task_data)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_tasks(test_user: Dict[str, Any]) -> List[Dict[str, Any]]:
     """创建多个测试任务"""
     tasks = []
@@ -159,14 +183,14 @@ async def test_tasks(test_user: Dict[str, Any]) -> List[Dict[str, Any]]:
     return tasks
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_data_set() -> Dict[str, List[Dict[str, Any]]]:
     """创建完整的测试数据集"""
     return await test_data_manager.create_test_data_set(users=3, tasks_per_user=5)
 
 
 # 缓存相关fixture
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def cache_enabled():
     """启用缓存的测试环境"""
     original_enabled = enhanced_cache.enabled
@@ -175,7 +199,7 @@ async def cache_enabled():
     enhanced_cache.enabled = original_enabled
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def cache_disabled():
     """禁用缓存的测试环境"""
     original_enabled = enhanced_cache.enabled
@@ -184,7 +208,7 @@ async def cache_disabled():
     enhanced_cache.enabled = original_enabled
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def warmed_cache():
     """预热缓存"""
     # 添加一些预热任务
@@ -286,7 +310,7 @@ def performance_monitor():
 
 
 # 清理fixture
-@pytest.fixture(scope="function", autouse=True)
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def cleanup_test_data():
     """在每个测试后清理测试数据"""
     yield

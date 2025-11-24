@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 测试页面</title>
+    <style>
+        /* 测试渐变背景 */
+        .test-gradient {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(to bottom right, #f8fafc, #ffffff, #f5f3ff);
+            margin-bottom: 20px;
+        }
+        
+        /* 测试深色渐变 */
+        .test-dark-gradient {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(to bottom right, #0f172a, #581c87, #0f172a);
+            margin-bottom: 20px;
+        }
+        
+        /* 测试模糊效果 */
+        .test-blur {
+            width: 200px;
+            height: 200px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 9999px;
+            filter: blur(64px);
+            margin: 20px;
+        }
+        
+        /* 测试动画 */
+        @keyframes blob {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        
+        .test-animation {
+            width: 100px;
+            height: 100px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            animation: blob 7s infinite;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+        }
+        
+        h2 {
+            color: #374151;
+            margin-top: 30px;
+        }
+        
+        .info {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSS 样式测试页面</h1>
+    
+    <div class="info">
+        <p><strong>说明：</strong>这个页面用于测试浏览器是否支持登录页面所需的 CSS 特性。</p>
+        <p>如果你能看到下面的渐变、模糊效果和动画，说明浏览器支持这些特性。</p>
+    </div>
+    
+    <h2>1. 浅色渐变背景测试</h2>
+    <div class="test-gradient"></div>
+    <p>✅ 应该看到从浅灰到白色到浅紫色的渐变</p>
+    
+    <h2>2. 深色渐变背景测试</h2>
+    <div class="test-dark-gradient"></div>
+    <p>✅ 应该看到从深蓝到紫色到深蓝的渐变</p>
+    
+    <h2>3. 模糊效果测试</h2>
+    <div class="test-blur"></div>
+    <p>✅ 应该看到一个模糊的紫色光球</p>
+    
+    <h2>4. 动画测试</h2>
+    <div class="test-animation"></div>
+    <p>✅ 应该看到一个移动和缩放的紫色圆球</p>
+    
+    <h2>5. 浏览器信息</h2>
+    <div class="info">
+        <p><strong>User Agent:</strong> <span id="userAgent"></span></p>
+        <p><strong>支持 backdrop-filter:</strong> <span id="backdropFilter"></span></p>
+        <p><strong>支持 color-mix:</strong> <span id="colorMix"></span></p>
+    </div>
+    
+    <script>
+        // 显示浏览器信息
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        
+        // 检测 backdrop-filter 支持
+        const supportsBackdropFilter = CSS.supports('backdrop-filter', 'blur(10px)') || 
+                                       CSS.supports('-webkit-backdrop-filter', 'blur(10px)');
+        document.getElementById('backdropFilter').textContent = supportsBackdropFilter ? '✅ 是' : '❌ 否';
+        
+        // 检测 color-mix 支持
+        const supportsColorMix = CSS.supports('background-color', 'color-mix(in oklab, red 50%, blue)');
+        document.getElementById('colorMix').textContent = supportsColorMix ? '✅ 是' : '❌ 否';
+        
+        // 如果不支持某些特性，显示警告
+        if (!supportsBackdropFilter || !supportsColorMix) {
+            const warning = document.createElement('div');
+            warning.style.cssText = 'background: #fef2f2; border: 2px solid #ef4444; padding: 15px; border-radius: 8px; margin-top: 20px;';
+            warning.innerHTML = '<strong style="color: #b91c1c;">⚠️ 警告：</strong> 你的浏览器不支持某些现代 CSS 特性。建议使用最新版本的 Chrome、Firefox 或 Edge。';
+            document.body.appendChild(warning);
+        }
+    </script>
+</body>
+</html>
+

@@ -4,9 +4,12 @@ from app.core.factory import Factory
 from app.services.user import UserService
 
 
-def get_user_service() -> UserService:
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db import get_session
+
+def get_user_service(db_session: AsyncSession = Depends(get_session)) -> UserService:
     """获取用户服务实例，供依赖注入使用。"""
-    return Factory().get_user_service()
+    return Factory().get_user_service(db_session=db_session)
 
 
 async def get_current_user(
