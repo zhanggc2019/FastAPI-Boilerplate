@@ -1,3 +1,4 @@
+from uuid import UUID
 from sqlalchemy import Select
 from sqlalchemy.orm import joinedload
 
@@ -10,16 +11,16 @@ class TaskRepository(BaseRepository[Task]):
     Task repository provides all the database operations for the Task model.
     """
 
-    async def get_by_author_id(self, author_id: int, join_: set[str] | None = None) -> list[Task]:
+    async def get_by_author_uuid(self, author_uuid: UUID, join_: set[str] | None = None) -> list[Task]:
         """
-        Get all tasks by author id.
+        Get all tasks by author uuid.
 
-        :param author_id: The author id to match.
+        :param author_uuid: The author uuid to match.
         :param join_: The joins to make.
         :return: A list of tasks.
         """
         query = self._query(join_)
-        query = await self._get_by(query, "task_author_id", author_id)
+        query = await self._get_by(query, "task_author_uuid", author_uuid)
 
         if join_ is not None:
             return await self._all_unique(query)
@@ -35,14 +36,14 @@ class TaskRepository(BaseRepository[Task]):
         """
         return query.options(joinedload(Task.author))
 
-    async def set_completed(self, task_id: int, completed: bool = True) -> Task:
+    async def set_completed(self, task_uuid: UUID, completed: bool = True) -> Task:
         """
         Set the completed status of a task.
 
-        :param task_id: The task id to update.
+        :param task_uuid: The task uuid to update.
         :param completed: The completion status.
         :return: The updated task.
         """
-        task = await self.get_by("id", task_id)
+        task = await self.get_by("uuid", task_uuid)
         task.is_completed = completed
         return task

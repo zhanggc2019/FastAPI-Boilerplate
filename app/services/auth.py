@@ -76,7 +76,7 @@ class AuthService(BaseService[User]):
             raise UnauthorizedException("用户账户未激活", "ACCOUNT_INACTIVE")
 
         return Token(
-            access_token=JWTHandler.encode(payload={"user_id": user.id}),
+            access_token=JWTHandler.encode(payload={"user_uuid": str(user.uuid)}),
             refresh_token=JWTHandler.encode(payload={"sub": "refresh_token"}),
         )
 
@@ -124,7 +124,7 @@ class AuthService(BaseService[User]):
             )
 
         return Token(
-            access_token=JWTHandler.encode(payload={"user_id": user.id}),
+            access_token=JWTHandler.encode(payload={"user_uuid": str(user.uuid)}),
             refresh_token=JWTHandler.encode(payload={"sub": "refresh_token"}),
         )
 

@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.models import BaseModel
@@ -18,7 +19,7 @@ class Task(BaseModel):
     description = Column(String(255), nullable=False)
     is_completed = Column(Boolean, default=False, nullable=False)
 
-    task_author_id = Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_author_uuid = Column(UUID(as_uuid=True), ForeignKey("users.uuid", ondelete="CASCADE"), nullable=False)
     author = relationship("User", back_populates="tasks", uselist=False, lazy="raise")
 
     def __acl__(self):
@@ -32,6 +33,6 @@ class Task(BaseModel):
 
         return [
             (Allow, Authenticated, basic_permissions),
-            (Allow, UserPrincipal(self.task_author_id), self_permissions),
+            (Allow, UserPrincipal(self.task_author_uuid), self_permissions),
             (Allow, RolePrincipal("admin"), all_permissions),
         ]

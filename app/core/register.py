@@ -204,7 +204,7 @@ def register_router(app: FastAPI) -> None:
     """
     from app.api import router
 
-    app.include_router(router)
+    app.include_router(router, prefix="/api")
     # Extra
     ensure_unique_route_names(app)
 

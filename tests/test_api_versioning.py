@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 
 from app.core.api_versioning import APIVersionManager, VersionedAPIRouter
-from app.core.config import settings
+from app.core.config import config
 
 
 class TestAPIVersioning:
@@ -36,9 +36,9 @@ class TestAPIVersioning:
     def test_version_manager_with_custom_config(self):
         """测试自定义配置的版本管理器"""
 
-        with patch.object(settings, "API_VERSION_HEADER", "X-My-API-Version"):
-            with patch.object(settings, "API_CURRENT_VERSION", "v2"):
-                with patch.object(settings, "API_SUPPORTED_VERSIONS", ["v1", "v2"]):
+        with patch.object(config, "API_VERSION_HEADER", "X-My-API-Version"):
+            with patch.object(config, "API_CURRENT_VERSION", "v2"):
+                with patch.object(config, "API_SUPPORTED_VERSIONS", ["v1", "v2"]):
                     manager = APIVersionManager()
 
                     assert manager.version_header == "X-My-API-Version"

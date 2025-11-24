@@ -34,11 +34,11 @@ class AuthBackend(AuthenticationBackend):
                 config.SECRET_KEY,
                 algorithms=[config.JWT_ALGORITHM],
             )
-            user_id = payload.get("user_id")
+            user_uuid = payload.get("user_uuid")
         except JWTError:
             return False, current_user
 
-        current_user.id = user_id
+        current_user.uuid = user_uuid
         return True, current_user
 
 

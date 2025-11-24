@@ -1,3 +1,4 @@
+from uuid import UUID
 from app.models import User
 from app.repositories import UserRepository
 from app.services.base import BaseService
@@ -81,18 +82,18 @@ class UserService(BaseService[User]):
         # 创建用户
         return await self.user_repository.create(user_data)
 
-    async def update_user(self, user_id: int, update_data: dict) -> User:
+    async def update_user(self, user_uuid: UUID, update_data: dict) -> User:
         """更新用户信息，包含业务逻辑验证"""
-        if not user_id:
-            raise DataValidationException("User ID is required")
+        if not user_uuid:
+            raise DataValidationException("User UUID is required")
 
         if not update_data:
             raise DataValidationException("Update data cannot be empty")
 
         # 检查用户是否存在
-        existing_user = await self.user_repository.get_by_id(user_id)
+        existing_user = await self.user_repository.get_by("uuid", user_uuid, unique=True)
         if not existing_user:
-            raise UserNotFoundException(f"User with ID {user_id} not found")
+            raise UserNotFoundException(f"User with UUID {user_uuid} not found")
 
         # 如果更新邮箱，验证格式和唯一性
         if "email" in update_data:
@@ -102,7 +103,7 @@ class UserService(BaseService[User]):
 
             # 检查新邮箱是否已被其他用户使用
             email_user = await self.user_repository.get_by_email(email)
-            if email_user and email_user.id != user_id:
+            if email_user and email_user.uuid != user_uuid:
                 raise UserAlreadyExistsException(f"Email '{email}' is already used by another user")
 
         # 如果更新用户名，验证格式和唯一性
@@ -116,7 +117,7 @@ class UserService(BaseService[User]):
 
             # 检查新用户名是否已被其他用户使用
             username_user = await self.user_repository.get_by_username(username)
-            if username_user and username_user.id != user_id:
+            if username_user and username_user.uuid != user_uuid:
                 raise UserAlreadyExistsException(f"Username '{username}' is already used by another user")
 
         # 如果更新密码，验证强度
@@ -126,4 +127,4 @@ class UserService(BaseService[User]):
                 raise DataValidationException("Password must be at least 8 characters long")
 
         # 更新用户信息
-        return await self.user_repository.update(user_id, update_data)
+        return await self.user_repository.update(existing_user, update_data)

@@ -169,15 +169,15 @@ class TestExceptionHandling:
         """测试错误响应结构"""
         error_response = ErrorResponse(
             success=False,
+            code=400,
             message="Test error",
-            error_code=40001,
-            details={"field": "email", "reason": "invalid format"},
+            detail={"field": "email", "reason": "invalid format"},
         )
 
         assert error_response.success is False
         assert error_response.message == "Test error"
-        assert error_response.error_code == 40001
-        assert error_response.details == {"field": "email", "reason": "invalid format"}
+        assert error_response.code == 400
+        assert error_response.detail == {"field": "email", "reason": "invalid format"}
 
     @pytest.mark.asyncio
     async def test_exception_handler_execution(self):
@@ -188,11 +188,13 @@ class TestExceptionHandling:
 
         # 模拟请求上下文
         mock_request = AsyncMock()
+        mock_request.url.path = "/test"
+        mock_request.method = "GET"
 
-        response = await handler.handle_exception(exc, mock_request)
+        response = await handler.handle_custom_exception(mock_request, exc)
 
         assert response.status_code == 400
-        assert response.content is not None
+        assert response.body is not None
 
     def test_fastapi_exception_handlers(self, app, client):
         """测试FastAPI异常处理器"""
@@ -276,28 +278,28 @@ class TestExceptionHandling:
         assert response.status_code == 404
         data = response.json()
         assert data["success"] is False
-        assert data["error_code"] == 40402
+        assert data["code"] == 404
 
         # 测试数据验证错误
         response = client.get("/test-data-validation")
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
-        assert data["error_code"] == 40003
+        assert data["code"] == 400
 
         # 测试无效操作
         response = client.get("/test-invalid-operation")
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
-        assert data["error_code"] == 40002
+        assert data["code"] == 400
 
         # 测试外部服务错误
         response = client.get("/test-external-service")
         assert response.status_code == 502
         data = response.json()
         assert data["success"] is False
-        assert data["error_code"] == 50201
+        assert data["code"] == 502
 
     def test_exception_with_details(self, app, client):
         """测试带详细信息的异常"""
@@ -326,8 +328,8 @@ class TestExceptionHandling:
         assert response.status_code == 400
         data = response.json()
         assert data["success"] is False
-        assert data["error_code"] == 40003
-        assert "details" in data
+        assert data["code"] == 400
+        assert "detail" in data
 
     def test_unhandled_exception_fallback(self, app, client):
         """测试未处理异常的回退处理"""
@@ -351,12 +353,14 @@ class TestExceptionHandling:
 
             exc = BadRequestException("Test logging")
             mock_request = AsyncMock()
+            mock_request.url.path = "/test"
+            mock_request.method = "GET"
 
-            await handler.handle_exception(exc, mock_request)
+            await handler.handle_custom_exception(mock_request, exc)
 
             # 验证日志记录
-            mock_logger.error.assert_called_once()
-            call_args = mock_logger.error.call_args[0]
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
             assert "Test logging" in call_args[0]
 
     def test_exception_inheritance(self):

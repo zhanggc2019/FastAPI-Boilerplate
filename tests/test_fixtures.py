@@ -14,7 +14,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import router as api_router
-from app.core.cache import enhanced_cache, cache_warmer, cache_monitor
 from app.core.cache.redis_backend import redis_backend
 from app.core.config import config
 from app.core.middlewares import AuthBackend, AuthenticationMiddleware, SQLAlchemyMiddleware
@@ -63,15 +62,11 @@ async def setup_test_environment():
     except Exception as e:
         logger.warning(f"Failed to flush Redis: {e}")
 
-    # 清理缓存监控器状态
-    cache_monitor.reset_stats()
-
     yield
 
     # 清理工作
     logger.info("Tearing down test environment...")
     await redis_client.close()
-    await enhanced_cache.close()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -189,43 +184,9 @@ async def test_data_set() -> Dict[str, List[Dict[str, Any]]]:
     return await test_data_manager.create_test_data_set(users=3, tasks_per_user=5)
 
 
-# 缓存相关fixture
-@pytest_asyncio.fixture(scope="function")
-async def cache_enabled():
-    """启用缓存的测试环境"""
-    original_enabled = enhanced_cache.enabled
-    enhanced_cache.enabled = True
-    yield
-    enhanced_cache.enabled = original_enabled
-
-
-@pytest_asyncio.fixture(scope="function")
-async def cache_disabled():
-    """禁用缓存的测试环境"""
-    original_enabled = enhanced_cache.enabled
-    enhanced_cache.enabled = False
-    yield
-    enhanced_cache.enabled = original_enabled
-
-
-@pytest_asyncio.fixture(scope="function")
-async def warmed_cache():
-    """预热缓存"""
-    # 添加一些预热任务
-    warmup_tasks = [
-        {"key": "user_profile_1", "data": {"id": 1, "name": "Test User", "email": "test@example.com"}, "ttl": 3600},
-        {"key": "task_list_page_1", "data": [{"id": i, "title": f"Task {i}"} for i in range(1, 6)], "ttl": 1800},
-    ]
-
-    for task in warmup_tasks:
-        await cache_warmer.add_warmup_task(task["key"], lambda d=task["data"]: d, ttl=task["ttl"])
-
-    await cache_warmer.execute_warmup()
-    yield
-
-    # 清理预热数据
-    for task in warmup_tasks:
-        await enhanced_cache.delete(task["key"])
+# 缓存相关fixture已移除
+# 注意：高级缓存功能（enhanced_cache, cache_warmer）已被移除
+# 如需缓存测试，请使用基础的 Cache 和 RedisBackend
 
 
 # 异常相关fixture
@@ -377,9 +338,6 @@ __all__ = [
     "test_task",
     "test_tasks",
     "test_data_set",
-    "cache_enabled",
-    "cache_disabled",
-    "warmed_cache",
     "custom_exceptions",
     "mock_redis_client",
     "mock_external_api",

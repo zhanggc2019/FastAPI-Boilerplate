@@ -43,15 +43,15 @@ async def get_user_principals(
         user_service = Factory().get_user_service()
 
     principals: list = [Everyone]
-    user_id = getattr(request.user, "id", None)
+    user_uuid = getattr(request.user, "uuid", None)
 
-    if not user_id:
+    if not user_uuid:
         return principals
 
-    user = await user_service.get_by_id(id_=user_id)
+    user = await user_service.get_by_uuid(uuid_=user_uuid)
 
     principals.append(Authenticated)
-    principals.append(UserPrincipal(user.id))
+    principals.append(UserPrincipal(user.uuid))
 
     if getattr(user, "is_admin", False):
         principals.append(RolePrincipal("admin"))

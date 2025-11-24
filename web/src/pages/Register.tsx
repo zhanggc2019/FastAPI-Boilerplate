@@ -11,6 +11,7 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -18,7 +19,8 @@ export default function Register() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+    setFieldErrors({});
+
     try {
       await api.post('/users/register', {
         email,
@@ -26,9 +28,28 @@ export default function Register() {
         password,
       });
       navigate('/login');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Registration failed. Please try again.');
+
+      // 处理验证错误
+      if (err.response?.status === 422 && err.response?.data?.detail?.field_errors) {
+        const errors: Record<string, string> = {};
+        const fieldErrorsData = err.response.data.detail.field_errors;
+
+        for (const [field, fieldErrorList] of Object.entries(fieldErrorsData)) {
+          if (Array.isArray(fieldErrorList) && fieldErrorList.length > 0) {
+            errors[field] = (fieldErrorList[0] as any).message || '验证失败';
+          }
+        }
+
+        setFieldErrors(errors);
+        setError('请检查输入的信息');
+      } else if (err.response?.data?.message) {
+        // 处理其他业务错误
+        setError(err.response.data.message);
+      } else {
+        setError('注册失败，请稍后重试');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +109,7 @@ export default function Register() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create account</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">创建用户</h2>
             <p className="text-gray-600">Get started with your free account today.</p>
           </div>
 
@@ -106,10 +127,15 @@ export default function Register() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className={`pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${
+                    fieldErrors.email ? 'border-red-500' : ''
+                  }`}
                   placeholder="Enter your email"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-sm text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Username field */}
@@ -125,10 +151,16 @@ export default function Register() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className={`pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${
+                    fieldErrors.username ? 'border-red-500' : ''
+                  }`}
                   placeholder="Choose a username"
                 />
               </div>
+              {fieldErrors.username && (
+                <p className="text-sm text-red-600">{fieldErrors.username}</p>
+              )}
+              <p className="text-xs text-gray-500">只能包含字母、数字、下划线和连字符</p>
             </div>
 
             {/* Password field */}
@@ -144,10 +176,16 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className={`pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${
+                    fieldErrors.password ? 'border-red-500' : ''
+                  }`}
                   placeholder="Create a password"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="text-sm text-red-600">{fieldErrors.password}</p>
+              )}
+              <p className="text-xs text-gray-500">至少8个字符，包含大写字母、数字和特殊字符</p>
             </div>
 
             {/* Error message */}
@@ -170,7 +208,7 @@ export default function Register() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <span>Create account</span>
+                  <span>创建用户</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
               )}
@@ -179,12 +217,12 @@ export default function Register() {
             {/* Login link */}
             <div className="text-center pt-4">
               <p className="text-sm text-gray-600">
-                Already have an account?{' '}
+                已有账号?{' '}
                 <Link
                   to="/login"
                   className="text-blue-600 hover:text-blue-700 font-semibold"
                 >
-                  Sign in
+                  登录
                 </Link>
               </p>
             </div>

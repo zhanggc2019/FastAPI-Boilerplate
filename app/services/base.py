@@ -17,18 +17,18 @@ class BaseService(Generic[ModelType]):
         self.model_class = model
         self.repository = repository
 
-    async def get_by_id(self, id_: int, join_: set[str] | None = None) -> ModelType:
+    async def get_by_uuid(self, uuid_: UUID, join_: set[str] | None = None) -> ModelType:
         """
-        Returns the model instance matching the id.
+        Returns the model instance matching the uuid.
 
-        :param id_: The id to match.
+        :param uuid_: The uuid to match.
         :param join_: The joins to make.
         :return: The model instance.
         """
 
-        db_obj = await self.repository.get_by(field="id", value=id_, join_=join_, unique=True)
+        db_obj = await self.repository.get_by(field="uuid", value=uuid_, join_=join_, unique=True)
         if not db_obj:
-            raise NotFoundException(f"{self.model_class.__tablename__.title()} with id: {id} does not exist")
+            raise NotFoundException(f"{self.model_class.__tablename__.title()} with uuid: {uuid_} does not exist")
 
         return db_obj
 

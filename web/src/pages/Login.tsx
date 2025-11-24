@@ -19,21 +19,28 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
-      const formData = new FormData();
-      formData.append('username', email);
-      formData.append('password', password);
-      
-      const response = await api.post('/users/login', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const response = await api.post('/users/login', {
+        email,
+        password,
       });
-      
+
       localStorage.setItem('token', response.data.access_token);
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Invalid credentials. Please try again.');
+
+      // 处理不同类型的错误
+      if (err.response?.status === 401) {
+        setError('邮箱或密码错误，请重试');
+      } else if (err.response?.status === 422) {
+        setError('请输入有效的邮箱和密码');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('登录失败，请稍后重试');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -19,7 +19,7 @@ async def get_tasks(
     task_service: TaskService = Depends(Factory().get_task_service),
     assert_access: Callable = Depends(Permissions(str(BasePermission.READ))),
 ) -> list[TaskResponse]:
-    tasks = await task_service.get_by_author_id(request.user.id)
+    tasks = await task_service.get_by_author_uuid(request.user.uuid)
 
     assert_access(tasks)
     return [TaskResponse.model_validate(task) for task in tasks]
@@ -34,7 +34,7 @@ async def create_task(
     task = await task_service.add(
         title=task_create.title,
         description=task_create.description,
-        author_id=request.user.id,
+        author_uuid=request.user.uuid,
     )
     return TaskResponse.model_validate(task)
 

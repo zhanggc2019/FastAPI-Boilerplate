@@ -29,6 +29,6 @@ class User(BaseModel):
 
         return [
             (Allow, Everyone, basic_permissions),
-            (Allow, UserPrincipal(value=self.id), self_permissions),
+            (Allow, UserPrincipal(value=self.uuid), self_permissions),
             (Allow, RolePrincipal(value="admin"), all_permissions),
         ]

@@ -21,10 +21,10 @@ async def get_current_user(
 
     Args:
         request: FastAPI 请求对象，包含用户上下文。
-        user_service: 业务服务，用于按 ID 查询用户。
+        user_service: 业务服务，用于按 UUID 查询用户。
 
     Returns:
         当前用户实体。
     """
-    return await user_service.get_by_id(request.user.id)
+    return await user_service.get_by_uuid(request.user.uuid)
 
