@@ -10,8 +10,7 @@ class RagflowChatMessage(BaseModel):
 
 class RagflowAskRequest(BaseModel):
     question: str | None = Field(default=None, description="User question (shortcut for single message)")
-    model: str | None = Field(default=None, description="Model name")
     messages: list[RagflowChatMessage] | None = Field(default=None, description="Chat messages")
     chat_id: str | None = Field(default=None, description="Override chat id")
     stream: bool = Field(default=False, description="Whether to stream response")
-    extra_body: dict[str, Any] | None = Field(default=None, description="Extra OpenAI-compatible payload")
+    extra_body: dict[str, Any] | None = Field(default=None, description="Extra request body")

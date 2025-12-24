@@ -8,7 +8,8 @@
       "Bash(make:*)",
       "Bash(uv sync:*)",
       "Bash(uv add:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

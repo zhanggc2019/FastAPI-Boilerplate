@@ -1,12 +1,47 @@
+import os
 from enum import Enum
 from pathlib import Path
 
+import yaml
 from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 项目根目录
-BASE_PATH = Path(__file__).resolve().parent.parent
+# 项目根目录 (app/core/config.py -> parent.parent = 项目根目录)
+# 实际: app/core/config.py -> parent = app -> parent = 项目根目录 -> parent = 真正的项目根目录
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+BASE_PATH = PROJECT_ROOT
+CONFIG_FILE = os.environ.get("CONFIG_FILE", str(PROJECT_ROOT / "config.yaml"))
+
+
+def _load_yaml_config() -> dict:
+    """加载 YAML 配置文件"""
+    config_path = Path(CONFIG_FILE)
+    if config_path.exists():
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    return {}
+
+
+# 加载 YAML 配置
+_yaml_config = _load_yaml_config()
+
+# 将嵌套的 YAML 配置展平为环境变量格式
+def _flatten_dict(d: dict, parent_key: str = "", sep: str = "_") -> dict:
+    """将嵌套字典展平为单层字典，键使用下划线连接"""
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(_flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key.upper(), v))
+    return dict(items)
+
+
+_flat_yaml_config = _flatten_dict(_yaml_config) if _yaml_config else {}
 print(f"项目根目录: {BASE_PATH}")
+if _flat_yaml_config:
+    print(f"已加载配置文件: {CONFIG_FILE}")
 
 
 class EnvironmentType(str, Enum):
@@ -16,7 +51,24 @@ class EnvironmentType(str, Enum):
 
 
 class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
+    """配置类，优先级: 环境变量 > YAML 配置 > 默认值"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    def __init__(self, **kwargs):
+        # 先用 YAML 配置初始化
+        if _flat_yaml_config:
+            # 将 YAML 配置转换为 pydantic 需要的格式
+            for key, value in _flat_yaml_config.items():
+                # 跳过已经通过环境变量设置的值
+                if key not in os.environ:
+                    kwargs.setdefault(key, value)
+        super().__init__(**kwargs)
 
     # Server
     SERVER_HOST: str = Field(default="localhost", validation_alias="SERVER_HOST")
@@ -24,8 +76,8 @@ class Config(BaseSettings):
 
     # FastAPI
     FASTAPI_API_V1_PATH: str = "/api/v1"
-    FASTAPI_TITLE: str = "FastAPI Best Boilerplate"
-    FASTAPI_DESCRIPTION: str = "FastAPI 脚手架"
+    FASTAPI_TITLE: str = "Knowledge Assistant"
+    FASTAPI_DESCRIPTION: str = "Knowledge Base Assistant"
     FASTAPI_DOCS_URL: str = "/docs"
     FASTAPI_REDOC_URL: str = "/redoc"
     FASTAPI_OPENAPI_URL: str | None = "/openapi"
@@ -66,7 +118,11 @@ class Config(BaseSettings):
     ENVIRONMENT: str = EnvironmentType.DEVELOPMENT
     POSTGRES_URL: PostgresDsn = Field(
         default=PostgresDsn("postgresql+asyncpg://user:password@127.0.0.1:5432/db-name"),
-        validation_alias="POSTGRES_URL",
+        validation_alias="DATABASE_URL",
+    )
+    TEST_POSTGRES_URL: PostgresDsn | None = Field(
+        default=None,
+        validation_alias="DATABASE_TEST_URL",
     )
     RELEASE_VERSION: str = "0.1"
     SHOW_SQL_ALCHEMY_QUERIES: int = 0
@@ -110,47 +166,100 @@ class Config(BaseSettings):
                 "pool_pre_ping": self.DATABASE_POOL_PRE_PING,
                 "pool_use_lifo": self.DATABASE_POOL_USE_LIFO,
             }
-    # jwt 配置 - 强制从环境变量读取，移除硬编码默认值
-    SECRET_KEY: str = Field("change-me")
+
+    # jwt 配置
+    JWT_SECRET_KEY: str = Field(default="change-me", validation_alias="JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
 
-    # .env Redis
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_PASSWORD: str
-    REDIS_DATABASE: int
+    # 兼容旧配置名
+    @property
+    def SECRET_KEY(self) -> str:
+        return self.JWT_SECRET_KEY
+
+    # Redis 配置
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    REDIS_DATABASE: int = 7
     REDIS_TIMEOUT: int = 5
 
-    # .env RabbitMQ/Celery
-    RABBITMQ_HOST: str = "localhost"
-    RABBITMQ_PORT: int = 5672
-    RABBITMQ_USER: str = "rabbit"
-    RABBITMQ_PASSWORD: str = "password"
-    RABBITMQ_VHOST: str = "/"
+    # Celery 配置 (使用 Redis 作为 broker)
+    CELERY_REDIS_DATABASE: int = 8
 
     # 请求限制配置
     REQUEST_LIMITER_REDIS_PREFIX: str = "fastapi:limiter"
 
     # OAuth settings
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = ""
+    OAUTH_GOOGLE_CLIENT_ID: str = Field(default="", validation_alias="OAUTH_GOOGLE_CLIENT_ID")
+    OAUTH_GOOGLE_CLIENT_SECRET: str = Field(default="", validation_alias="OAUTH_GOOGLE_CLIENT_SECRET")
+    OAUTH_GOOGLE_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_GOOGLE_REDIRECT_URI")
 
-    GITHUB_CLIENT_ID: str = ""
-    GITHUB_CLIENT_SECRET: str = ""
-    GITHUB_REDIRECT_URI: str = ""
+    OAUTH_GITHUB_CLIENT_ID: str = Field(default="", validation_alias="OAUTH_GITHUB_CLIENT_ID")
+    OAUTH_GITHUB_CLIENT_SECRET: str = Field(default="", validation_alias="OAUTH_GITHUB_CLIENT_SECRET")
+    OAUTH_GITHUB_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_GITHUB_REDIRECT_URI")
 
-    # WeChat OAuth settings
-    WECHAT_APP_ID: str = ""
-    WECHAT_APP_SECRET: str = ""
-    WECHAT_REDIRECT_URI: str = ""
+    OAUTH_WECHAT_APP_ID: str = Field(default="", validation_alias="OAUTH_WECHAT_APP_ID")
+    OAUTH_WECHAT_APP_SECRET: str = Field(default="", validation_alias="OAUTH_WECHAT_APP_SECRET")
+    OAUTH_WECHAT_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_WECHAT_REDIRECT_URI")
 
-    # Alipay OAuth settings
-    ALIPAY_APP_ID: str = ""
-    ALIPAY_PRIVATE_KEY: str = ""
-    ALIPAY_PUBLIC_KEY: str = ""
-    ALIPAY_REDIRECT_URI: str = ""
+    OAUTH_ALIPAY_APP_ID: str = Field(default="", validation_alias="OAUTH_ALIPAY_APP_ID")
+    OAUTH_ALIPAY_PRIVATE_KEY: str = Field(default="", validation_alias="OAUTH_ALIPAY_PRIVATE_KEY")
+    OAUTH_ALIPAY_PUBLIC_KEY: str = Field(default="", validation_alias="OAUTH_ALIPAY_PUBLIC_KEY")
+    OAUTH_ALIPAY_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_ALIPAY_REDIRECT_URI")
+
+    # 兼容旧配置名
+    @property
+    def GOOGLE_CLIENT_ID(self) -> str:
+        return self.OAUTH_GOOGLE_CLIENT_ID
+
+    @property
+    def GOOGLE_CLIENT_SECRET(self) -> str:
+        return self.OAUTH_GOOGLE_CLIENT_SECRET
+
+    @property
+    def GOOGLE_REDIRECT_URI(self) -> str:
+        return self.OAUTH_GOOGLE_REDIRECT_URI
+
+    @property
+    def GITHUB_CLIENT_ID(self) -> str:
+        return self.OAUTH_GITHUB_CLIENT_ID
+
+    @property
+    def GITHUB_CLIENT_SECRET(self) -> str:
+        return self.OAUTH_GITHUB_CLIENT_SECRET
+
+    @property
+    def GITHUB_REDIRECT_URI(self) -> str:
+        return self.OAUTH_GITHUB_REDIRECT_URI
+
+    @property
+    def WECHAT_APP_ID(self) -> str:
+        return self.OAUTH_WECHAT_APP_ID
+
+    @property
+    def WECHAT_APP_SECRET(self) -> str:
+        return self.OAUTH_WECHAT_APP_SECRET
+
+    @property
+    def WECHAT_REDIRECT_URI(self) -> str:
+        return self.OAUTH_WECHAT_REDIRECT_URI
+
+    @property
+    def ALIPAY_APP_ID(self) -> str:
+        return self.OAUTH_ALIPAY_APP_ID
+
+    @property
+    def ALIPAY_PRIVATE_KEY(self) -> str:
+        return self.OAUTH_ALIPAY_PRIVATE_KEY
+
+    @property
+    def ALIPAY_PUBLIC_KEY(self) -> str:
+        return self.OAUTH_ALIPAY_PUBLIC_KEY
+
+    @property
+    def ALIPAY_REDIRECT_URI(self) -> str:
+        return self.OAUTH_ALIPAY_REDIRECT_URI
 
     # RAGFlow settings
     RAGFLOW_BASE_URL: str = Field(default="http://localhost:9380", validation_alias="RAGFLOW_BASE_URL")
@@ -159,24 +268,29 @@ class Config(BaseSettings):
     RAGFLOW_API_KEY_PREFIX: str = Field(default="Bearer", validation_alias="RAGFLOW_API_KEY_PREFIX")
     RAGFLOW_CHAT_PATH: str = Field(default="/api/v1/chats/{chat_id}/completions", validation_alias="RAGFLOW_CHAT_PATH")
     RAGFLOW_CHAT_ID: str = Field(default="", validation_alias="RAGFLOW_CHAT_ID")
-    RAGFLOW_KB_ID: str = Field(default="", validation_alias="RAGFLOW_KB_ID")
     RAGFLOW_TIMEOUT: int = Field(default=30, validation_alias="RAGFLOW_TIMEOUT")
-    RAGFLOW_MODEL: str = Field(default="model", validation_alias="RAGFLOW_MODEL")
 
-    OPERA_LOG_ENCRYPT_KEY_INCLUDE: list[str] = [  # 将加密接口入参参数对应的值
-        "password",
-        "old_password",
-        "new_password",
-        "confirm_password",
-    ]
+    # 操作日志加密字段
+    OPERATION_LOG_ENCRYPT_KEY_INCLUDE: list[str] = Field(
+        default=["password", "old_password", "new_password", "confirm_password"],
+        validation_alias="OPERATION_LOG_ENCRYPT_KEY_INCLUDE",
+    )
 
-    # 操作日志
-    OPERA_LOG_PATH_EXCLUDE: list[str] = [
-        "/favicon.ico",
-        "/docs",
-        "/redoc",
-        "/openapi",
-    ]
+    # 兼容旧配置名
+    @property
+    def OPERA_LOG_ENCRYPT_KEY_INCLUDE(self) -> list[str]:
+        return self.OPERATION_LOG_ENCRYPT_KEY_INCLUDE
+
+    # 操作日志排除路径
+    OPERATION_LOG_PATH_EXCLUDE: list[str] = Field(
+        default=["/favicon.ico", "/docs", "/redoc", "/openapi"],
+        validation_alias="OPERATION_LOG_PATH_EXCLUDE",
+    )
+
+    # 兼容旧配置名
+    @property
+    def OPERA_LOG_PATH_EXCLUDE(self) -> list[str]:
+        return self.OPERATION_LOG_PATH_EXCLUDE
 
     @property
     def postgres_url_str(self) -> str:
@@ -190,9 +304,10 @@ class Config(BaseSettings):
 
     @property
     def celery_broker_url(self) -> str:
-        if self.RABBITMQ_PASSWORD:
-            return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_VHOST}"
-        return f"amqp://{self.RABBITMQ_USER}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_VHOST}"
+        """Celery broker URL，使用 Redis"""
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.CELERY_REDIS_DATABASE}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.CELERY_REDIS_DATABASE}"
 
     @property
     def celery_backend_url(self) -> str:
@@ -208,27 +323,22 @@ class Config(BaseSettings):
     @property
     def google_redirect_uri(self) -> str:
         """返回Google OAuth回调URI"""
-        return self.GOOGLE_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/google/callback"
+        return self.OAUTH_GOOGLE_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/google/callback"
 
     @property
     def github_redirect_uri(self) -> str:
         """返回GitHub OAuth回调URI"""
-        return self.GITHUB_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/github/callback"
+        return self.OAUTH_GITHUB_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/github/callback"
 
     @property
     def wechat_redirect_uri(self) -> str:
         """返回WeChat OAuth回调URI"""
-        return self.WECHAT_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/wechat/callback"
+        return self.OAUTH_WECHAT_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/wechat/callback"
 
     @property
     def alipay_redirect_uri(self) -> str:
         """返回Alipay OAuth回调URI"""
-        return self.ALIPAY_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/alipay/callback"
-
-    @property
-    def server_url(self) -> str:
-        """返回服务器完整URL"""
-        return f"http://{self.SERVER_HOST}:{self.SERVER_PORT}"
+        return self.OAUTH_ALIPAY_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/alipay/callback"
 
 
 config: Config = Config()

@@ -17,7 +17,6 @@ async def ask_ragflow(
     if payload.stream:
         stream = ragflow_service.ask_stream(
             question=payload.question,
-            model=payload.model,
             messages=[message.model_dump() for message in payload.messages] if payload.messages else None,
             chat_id=payload.chat_id,
             extra_body=payload.extra_body,
@@ -30,7 +29,6 @@ async def ask_ragflow(
 
     response = await ragflow_service.ask(
         question=payload.question,
-        model=payload.model,
         messages=[message.model_dump() for message in payload.messages] if payload.messages else None,
         chat_id=payload.chat_id,
         stream=False,

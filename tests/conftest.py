@@ -15,14 +15,12 @@ from app.core.config import config
 # Load environment variables from .env file
 load_dotenv(".env")
 
-TEST_DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
+# 优先使用环境变量，其次使用 YAML 配置中的 test_url
+TEST_DATABASE_URL = os.getenv("TEST_POSTGRES_URL") or str(config.TEST_POSTGRES_URL) if config.TEST_POSTGRES_URL else str(config.POSTGRES_URL)
 
 # Convert to asyncpg format if needed
 if TEST_DATABASE_URL and not TEST_DATABASE_URL.startswith("postgresql+asyncpg://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
-
-# Override the config to use the test database
-config.POSTGRES_URL = TEST_DATABASE_URL
 
 print(f"Using test database URL: {TEST_DATABASE_URL}")
 

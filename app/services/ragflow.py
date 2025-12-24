@@ -23,19 +23,14 @@ class RagflowService:
         self.api_key_prefix = config.RAGFLOW_API_KEY_PREFIX
         self.timeout = config.RAGFLOW_TIMEOUT
         self.default_chat_id = config.RAGFLOW_CHAT_ID
-        self.default_kb_id = config.RAGFLOW_KB_ID
-        self.default_model = config.RAGFLOW_MODEL
 
-    def _build_url(self, chat_id: str | None, kb_id: str | None) -> str:
+    def _build_url(self, chat_id: str | None) -> str:
         chat_id = chat_id or self.default_chat_id
-        kb_id = kb_id or self.default_kb_id
 
         if "{chat_id}" in self.chat_path and not chat_id:
             raise BadRequestException("Missing chat_id for RAGFlow request")
-        if "{kb_id}" in self.chat_path and not kb_id:
-            raise BadRequestException("Missing kb_id for RAGFlow request")
 
-        path = self.chat_path.format(chat_id=chat_id, kb_id=kb_id)
+        path = self.chat_path.format(chat_id=chat_id)
         if path.startswith("http://") or path.startswith("https://"):
             return path
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
@@ -75,32 +70,24 @@ class RagflowService:
     def _build_payload(
         self,
         question: str | None,
-        model: str | None,
         messages: list[dict[str, str]] | None,
         stream: bool,
-        kb_id: str | None,
         extra_body: dict[str, Any] | None,
     ) -> dict[str, Any]:
         resolved_messages = messages or [{"role": "user", "content": question or ""}]
         payload: dict[str, Any] = {
-            "model": model or self.default_model or "model",
             "messages": resolved_messages,
             "stream": stream,
         }
         if extra_body:
-            payload["extra_body"] = extra_body
-        if kb_id or self.default_kb_id:
-            payload.setdefault("extra_body", {})
-            payload["extra_body"]["kb_id"] = kb_id or self.default_kb_id
+            payload.update(extra_body)
         return payload
 
     async def ask(
         self,
         question: str | None = None,
-        model: str | None = None,
         messages: list[dict[str, str]] | None = None,
         chat_id: str | None = None,
-        kb_id: str | None = None,
         stream: bool = False,
         extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -109,9 +96,8 @@ class RagflowService:
         if stream:
             raise BadRequestException("Streaming responses are not supported by this endpoint")
 
-        payload = self._build_payload(question, model, messages, stream, kb_id, extra_body)
-
-        url = self._build_url(chat_id=chat_id, kb_id=kb_id)
+        payload = self._build_payload(question, messages, stream, extra_body)
+        url = self._build_url(chat_id=chat_id)
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -140,17 +126,15 @@ class RagflowService:
     def ask_stream(
         self,
         question: str | None = None,
-        model: str | None = None,
         messages: list[dict[str, str]] | None = None,
         chat_id: str | None = None,
-        kb_id: str | None = None,
         extra_body: dict[str, Any] | None = None,
     ) -> AsyncGenerator[bytes, None]:
         if not messages and not question:
             raise BadRequestException("Question or messages is required")
 
-        payload = self._build_payload(question, model, messages, True, kb_id, extra_body)
-        url = self._build_url(chat_id=chat_id, kb_id=kb_id)
+        payload = self._build_payload(question, messages, True, extra_body)
+        url = self._build_url(chat_id=chat_id)
 
         async def _generator() -> AsyncGenerator[bytes, None]:
             timeout = httpx.Timeout(self.timeout, read=None)

@@ -1,0 +1,123 @@
+# 应用配置
+# 支持 YAML 格式，便于 K8s ConfigMap/Secret 管理
+# 也可以通过环境变量覆盖（优先级: 环境变量 > YAML > 默认值）
+
+app:
+  name: "Knowledge Assistant"
+  description: "Knowledge Base Assistant"
+  version: "0.1"
+
+server:
+  host: "127.0.0.1"
+  port: 8001
+
+# 环境: development, production, test
+environment: "development"
+
+# API 配置
+api:
+  v1_path: "/api/v1"
+  docs_url: "/docs"
+  redoc_url: "/redoc"
+  openapi_url: "/openapi"
+  static_files: true
+  cors: true
+  version_header: "X-API-Version"
+  current_version: "v1"
+
+# 数据库配置
+database:
+  url: "postgresql+asyncpg://postgres:postgres3.14@214.10.8.251:5432/fastapi-db-pro"
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  pool_pre_ping: true
+  pool_use_lifo: false
+  echo: false
+  show_sql_queries: false
+
+# Redis 配置
+redis:
+  host: "214.10.8.251"
+  port: 6380
+  password: ""
+  database: 7
+  timeout: 5
+
+# Celery 配置 (使用 Redis 作为 broker)
+celery:
+  redis_database: 9
+
+# JWT 配置
+jwt:
+  secret_key: "P7mDn08xOIprMHPGehLUb4MJvn5****"
+  algorithm: "HS256"
+  expire_minutes: 10080  # 7 * 24 * 60
+
+# 日志配置
+logging:
+  std_level: "INFO"
+  file_access_level: "INFO"
+  file_error_level: "ERROR"
+  access_filename: "access.log"
+  error_filename: "error.log"
+  format: "{time:YYYY-MM-DD HH:mm:ss.SSS}</> | <lvl>{level: <8}</> | <cyan>{correlation_id}</> | <lvl>{message}</>"
+
+# 本地化
+locale:
+  default: "zh_CN"
+
+# 时区
+timezone: "Asia/Shanghai"
+
+# 请求限制
+rate_limit:
+  redis_prefix: "fastapi:limiter"
+
+# OAuth 配置
+oauth:
+  google:
+    client_id: ""
+    client_secret: ""
+    redirect_uri: ""
+  github:
+    client_id: ""
+    client_secret: ""
+    redirect_uri: ""
+  wechat:
+    app_id: ""
+    app_secret: ""
+    redirect_uri: ""
+  alipay:
+    app_id: ""
+    private_key: ""
+    public_key: ""
+    redirect_uri: ""
+
+# RAGFlow 配置
+ragflow:
+  base_url: "http://214.2.248.99"
+  api_key: "ragflow-R5ROKfIgt3kSb7JxUxkEs16PWn76yRfVHFFlAyBnd5c"
+  api_key_header: "Authorization"
+  api_key_prefix: "Bearer"
+  chat_path: "/api/v1/chats_openai/{chat_id}/chat/completions"
+  chat_id: "d7bbac18dfad11f096c60242ac1a0003"
+  timeout: 30
+
+# 操作日志
+operation_log:
+  encrypt_key_include:
+    - "password"
+    - "old_password"
+    - "new_password"
+    - "confirm_password"
+  path_exclude:
+    - "/favicon.ico"
+    - "/docs"
+    - "/redoc"
+    - "/openapi"
+
+# 前端配置 (Vite)
+frontend:
+  api_base_url: "http://127.0.0.1:8001"
