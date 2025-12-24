@@ -428,7 +428,7 @@ export default function Chatbot() {
       return;
     }
 
-    let conversationId = activeId;
+    let conversationId: string | null = activeId || null;
     if (!conversationId) {
       conversationId = await handleNewChat();
     }
@@ -707,7 +707,7 @@ export default function Chatbot() {
                     <p className="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-800">
                       {(() => {
                         if (message.role !== 'assistant') {
-                          return message.content || (message.role === 'assistant' && isSending ? '思考中…' : '');
+                          return message.content || '';
                         }
                         const displaySources = message.sources?.length
                           ? message.sources

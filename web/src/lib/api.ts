@@ -19,14 +19,12 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   console.info('[auth] request token', token ? 'present' : 'missing', config.url);
   if (token) {
-    if (config.headers && config.headers instanceof AxiosHeaders) {
-      config.headers.set('Authorization', `Bearer ${token}`);
-    } else {
-      config.headers = {
-        ...(config.headers || {}),
-        Authorization: `Bearer ${token}`,
-      };
-    }
+    const headers =
+      config.headers instanceof AxiosHeaders
+        ? config.headers
+        : AxiosHeaders.from(config.headers ?? {});
+    headers.set('Authorization', `Bearer ${token}`);
+    config.headers = headers;
   }
   return config;
 });
