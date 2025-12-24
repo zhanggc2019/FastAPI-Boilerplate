@@ -152,6 +152,17 @@ class Config(BaseSettings):
     ALIPAY_PUBLIC_KEY: str = ""
     ALIPAY_REDIRECT_URI: str = ""
 
+    # RAGFlow settings
+    RAGFLOW_BASE_URL: str = Field(default="http://localhost:9380", validation_alias="RAGFLOW_BASE_URL")
+    RAGFLOW_API_KEY: str = Field(default="", validation_alias="RAGFLOW_API_KEY")
+    RAGFLOW_API_KEY_HEADER: str = Field(default="Authorization", validation_alias="RAGFLOW_API_KEY_HEADER")
+    RAGFLOW_API_KEY_PREFIX: str = Field(default="Bearer", validation_alias="RAGFLOW_API_KEY_PREFIX")
+    RAGFLOW_CHAT_PATH: str = Field(default="/api/v1/chats/{chat_id}/completions", validation_alias="RAGFLOW_CHAT_PATH")
+    RAGFLOW_CHAT_ID: str = Field(default="", validation_alias="RAGFLOW_CHAT_ID")
+    RAGFLOW_KB_ID: str = Field(default="", validation_alias="RAGFLOW_KB_ID")
+    RAGFLOW_TIMEOUT: int = Field(default=30, validation_alias="RAGFLOW_TIMEOUT")
+    RAGFLOW_MODEL: str = Field(default="model", validation_alias="RAGFLOW_MODEL")
+
     OPERA_LOG_ENCRYPT_KEY_INCLUDE: list[str] = [  # 将加密接口入参参数对应的值
         "password",
         "old_password",

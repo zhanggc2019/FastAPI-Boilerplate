@@ -9,7 +9,7 @@ async def create_tables() -> None:
 
     # 导入所有模型，确保它们被注册到 Base.metadata 中
     # 导入所有模型以确保它们被注册到 Base.metadata
-    from app.models import user, task, opera_log, api_key  # 导入所有模型
+    from app.models import user, task, opera_log, api_key, chat  # 导入所有模型
 
     # 打印 Base 的元数据信息
     print(f"已注册的表: {list(Base.metadata.tables.keys())}")

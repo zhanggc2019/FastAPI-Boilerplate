@@ -17,6 +17,7 @@ class User(BaseModel):
 
     tasks = relationship("Task", back_populates="author", lazy="raise", passive_deletes=True)
     api_keys = relationship("ApiKey", back_populates="user", lazy="raise", passive_deletes=True)
+    chat_conversations = relationship("ChatConversation", back_populates="user", lazy="raise", passive_deletes=True)
 
     def __acl__(self):
         basic_permissions = [BasePermission.READ, BasePermission.CREATE]

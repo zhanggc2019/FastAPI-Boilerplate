@@ -4,9 +4,13 @@ from .monitoring import monitoring_router
 from .tasks import tasks_router
 from .users import users_router
 from .api_keys import api_keys_router
+from .ragflow import ragflow_api_router
+from .chats import chats_router
 
 v1_router = APIRouter()
 v1_router.include_router(monitoring_router, prefix="")
 v1_router.include_router(tasks_router, prefix="/tasks")
 v1_router.include_router(users_router, prefix="/users")
 v1_router.include_router(api_keys_router, prefix="/api-keys", tags=["API Keys"])
+v1_router.include_router(ragflow_api_router, prefix="/assistant")
+v1_router.include_router(chats_router, prefix="/chats")

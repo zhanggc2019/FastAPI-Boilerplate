@@ -1,0 +1,49 @@
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+
+from app.core.factory import Factory
+from app.schemas.requests.ragflow import RagflowAskRequest
+from app.schemas.responses.ragflow import RagflowAskResponse
+from app.services import RagflowService
+
+ragflow_router = APIRouter()
+
+
+@ragflow_router.post("/ask", response_model=RagflowAskResponse)
+async def ask_ragflow(
+    payload: RagflowAskRequest,
+    ragflow_service: RagflowService = Depends(Factory().get_ragflow_service),
+):
+    if payload.stream:
+        stream = ragflow_service.ask_stream(
+            question=payload.question,
+            model=payload.model,
+            messages=[message.model_dump() for message in payload.messages] if payload.messages else None,
+            chat_id=payload.chat_id,
+            extra_body=payload.extra_body,
+        )
+        return StreamingResponse(
+            stream,
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    response = await ragflow_service.ask(
+        question=payload.question,
+        model=payload.model,
+        messages=[message.model_dump() for message in payload.messages] if payload.messages else None,
+        chat_id=payload.chat_id,
+        stream=False,
+        extra_body=payload.extra_body,
+    )
+    return RagflowAskResponse.model_validate(response)
+
+
+@ragflow_router.get("/chunks/{dataset_id}/{document_id}/{chunk_id}")
+async def get_chunk_detail(
+    dataset_id: str,
+    document_id: str,
+    chunk_id: str,
+    ragflow_service: RagflowService = Depends(Factory().get_ragflow_service),
+):
+    return await ragflow_service.get_chunk(dataset_id=dataset_id, document_id=document_id, chunk_id=chunk_id)

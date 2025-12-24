@@ -57,41 +57,60 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left side - Dark with gradient */}
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden">
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-cyan-600/20 to-teal-600/20"></div>
-        
-        {/* Decorative elements */}
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
-        
+      {/* Left side - Dark with gradient and animations */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        {/* Animated gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-fuchsia-600/20 to-pink-600/20 animate-pulse"></div>
+
+        {/* Animated decorative elements */}
+        <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500/20 rounded-full blur-3xl animate-blob"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-fuchsia-500/20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500/10 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+
+        {/* Grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-          <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl mb-6">
-              <Sparkles className="w-7 h-7" />
+          <div className="mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl mb-6 shadow-2xl shadow-violet-500/50 animate-float">
+              <Sparkles className="w-8 h-8" />
             </div>
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Start Your Journey
+            <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-white via-violet-200 to-fuchsia-200 bg-clip-text text-transparent leading-tight">
+              欢迎使用 AI 知识库助手
             </h1>
-            <p className="text-xl text-gray-400 leading-relaxed">
-              Join thousands of developers building amazing APIs with FastAPI.
+            <p className="text-xl text-gray-300 leading-relaxed whitespace-nowrap">
+              构建现代化知识库服务，提供高效的知识检索与智能问答能力
             </p>
           </div>
-          
-          <div className="space-y-4 text-gray-400">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-              <span>Free to get started</span>
+
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 group">
+              <div className="flex items-center justify-center w-10 h-10 bg-violet-500/20 rounded-lg group-hover:bg-violet-500/30 transition-colors">
+                <Sparkles className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-1">快速开始</h3>
+                <p className="text-sm text-gray-400">几步完成注册，立即体验完整功能</p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
-              <span>No credit card required</span>
+            <div className="flex items-start gap-4 group">
+              <div className="flex items-center justify-center w-10 h-10 bg-fuchsia-500/20 rounded-lg group-hover:bg-fuchsia-500/30 transition-colors">
+                <Lock className="w-5 h-5 text-fuchsia-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-1">安全可靠</h3>
+                <p className="text-sm text-gray-400">完善的认证机制与权限控制</p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-              <span>Full access to all features</span>
+            <div className="flex items-start gap-4 group">
+              <div className="flex items-center justify-center w-10 h-10 bg-pink-500/20 rounded-lg group-hover:bg-pink-500/30 transition-colors">
+                <ArrowRight className="w-5 h-5 text-pink-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-1">即刻探索</h3>
+                <p className="text-sm text-gray-400">注册后直达知识库助手与控制台</p>
+              </div>
             </div>
           </div>
         </div>

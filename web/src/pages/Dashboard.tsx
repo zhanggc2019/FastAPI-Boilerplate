@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Key, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { MessageSquare, Trash2, Key, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface ApiKey {
@@ -108,7 +109,15 @@ export default function Dashboard() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Link to="/chatbot">
+          <Button className="gap-2">
+            <MessageSquare className="w-4 h-4" />
+            进入 Chatbot
+          </Button>
+        </Link>
+      </div>
 
       <Card className="mb-8">
         <CardHeader>
