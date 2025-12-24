@@ -190,77 +190,6 @@ class Config(BaseSettings):
     # 请求限制配置
     REQUEST_LIMITER_REDIS_PREFIX: str = "fastapi:limiter"
 
-    # OAuth settings
-    OAUTH_GOOGLE_CLIENT_ID: str = Field(default="", validation_alias="OAUTH_GOOGLE_CLIENT_ID")
-    OAUTH_GOOGLE_CLIENT_SECRET: str = Field(default="", validation_alias="OAUTH_GOOGLE_CLIENT_SECRET")
-    OAUTH_GOOGLE_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_GOOGLE_REDIRECT_URI")
-
-    OAUTH_GITHUB_CLIENT_ID: str = Field(default="", validation_alias="OAUTH_GITHUB_CLIENT_ID")
-    OAUTH_GITHUB_CLIENT_SECRET: str = Field(default="", validation_alias="OAUTH_GITHUB_CLIENT_SECRET")
-    OAUTH_GITHUB_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_GITHUB_REDIRECT_URI")
-
-    OAUTH_WECHAT_APP_ID: str = Field(default="", validation_alias="OAUTH_WECHAT_APP_ID")
-    OAUTH_WECHAT_APP_SECRET: str = Field(default="", validation_alias="OAUTH_WECHAT_APP_SECRET")
-    OAUTH_WECHAT_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_WECHAT_REDIRECT_URI")
-
-    OAUTH_ALIPAY_APP_ID: str = Field(default="", validation_alias="OAUTH_ALIPAY_APP_ID")
-    OAUTH_ALIPAY_PRIVATE_KEY: str = Field(default="", validation_alias="OAUTH_ALIPAY_PRIVATE_KEY")
-    OAUTH_ALIPAY_PUBLIC_KEY: str = Field(default="", validation_alias="OAUTH_ALIPAY_PUBLIC_KEY")
-    OAUTH_ALIPAY_REDIRECT_URI: str = Field(default="", validation_alias="OAUTH_ALIPAY_REDIRECT_URI")
-
-    # 兼容旧配置名
-    @property
-    def GOOGLE_CLIENT_ID(self) -> str:
-        return self.OAUTH_GOOGLE_CLIENT_ID
-
-    @property
-    def GOOGLE_CLIENT_SECRET(self) -> str:
-        return self.OAUTH_GOOGLE_CLIENT_SECRET
-
-    @property
-    def GOOGLE_REDIRECT_URI(self) -> str:
-        return self.OAUTH_GOOGLE_REDIRECT_URI
-
-    @property
-    def GITHUB_CLIENT_ID(self) -> str:
-        return self.OAUTH_GITHUB_CLIENT_ID
-
-    @property
-    def GITHUB_CLIENT_SECRET(self) -> str:
-        return self.OAUTH_GITHUB_CLIENT_SECRET
-
-    @property
-    def GITHUB_REDIRECT_URI(self) -> str:
-        return self.OAUTH_GITHUB_REDIRECT_URI
-
-    @property
-    def WECHAT_APP_ID(self) -> str:
-        return self.OAUTH_WECHAT_APP_ID
-
-    @property
-    def WECHAT_APP_SECRET(self) -> str:
-        return self.OAUTH_WECHAT_APP_SECRET
-
-    @property
-    def WECHAT_REDIRECT_URI(self) -> str:
-        return self.OAUTH_WECHAT_REDIRECT_URI
-
-    @property
-    def ALIPAY_APP_ID(self) -> str:
-        return self.OAUTH_ALIPAY_APP_ID
-
-    @property
-    def ALIPAY_PRIVATE_KEY(self) -> str:
-        return self.OAUTH_ALIPAY_PRIVATE_KEY
-
-    @property
-    def ALIPAY_PUBLIC_KEY(self) -> str:
-        return self.OAUTH_ALIPAY_PUBLIC_KEY
-
-    @property
-    def ALIPAY_REDIRECT_URI(self) -> str:
-        return self.OAUTH_ALIPAY_REDIRECT_URI
-
     # RAGFlow settings
     RAGFLOW_BASE_URL: str = Field(default="http://localhost:9380", validation_alias="RAGFLOW_BASE_URL")
     RAGFLOW_API_KEY: str = Field(default="", validation_alias="RAGFLOW_API_KEY")
@@ -319,26 +248,6 @@ class Config(BaseSettings):
     def server_url(self) -> str:
         """返回服务器完整URL"""
         return f"http://{self.SERVER_HOST}:{self.SERVER_PORT}"
-
-    @property
-    def google_redirect_uri(self) -> str:
-        """返回Google OAuth回调URI"""
-        return self.OAUTH_GOOGLE_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/google/callback"
-
-    @property
-    def github_redirect_uri(self) -> str:
-        """返回GitHub OAuth回调URI"""
-        return self.OAUTH_GITHUB_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/github/callback"
-
-    @property
-    def wechat_redirect_uri(self) -> str:
-        """返回WeChat OAuth回调URI"""
-        return self.OAUTH_WECHAT_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/wechat/callback"
-
-    @property
-    def alipay_redirect_uri(self) -> str:
-        """返回Alipay OAuth回调URI"""
-        return self.OAUTH_ALIPAY_REDIRECT_URI or f"{self.server_url}/v1/users/oauth/alipay/callback"
 
 
 config: Config = Config()

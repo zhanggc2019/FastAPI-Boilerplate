@@ -75,26 +75,6 @@ timezone: "Asia/Shanghai"
 rate_limit:
   redis_prefix: "fastapi:limiter"
 
-# OAuth 配置
-oauth:
-  google:
-    client_id: ""
-    client_secret: ""
-    redirect_uri: ""
-  github:
-    client_id: ""
-    client_secret: ""
-    redirect_uri: ""
-  wechat:
-    app_id: ""
-    app_secret: ""
-    redirect_uri: ""
-  alipay:
-    app_id: ""
-    private_key: ""
-    public_key: ""
-    redirect_uri: ""
-
 # RAGFlow 配置
 ragflow:
   base_url: "http://214.2.248.99"
