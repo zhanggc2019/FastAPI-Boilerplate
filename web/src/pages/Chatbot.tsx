@@ -81,7 +81,7 @@ const formatTime = (value: string) =>
 const exampleQuestions = [
   '如何定义“双师型”教师？',
   '教师队伍建设新形势有哪些?',
-  '职业教育实训基地建设的核心指标是什么？',
+  '"双师型"职教师资培养存在的问题？',
   '素提计划实施的整体情况',
 ];
 
@@ -231,15 +231,40 @@ const citationSchema = {
     '*': [
       ...(defaultSchema.attributes?.['*'] || []),
       'data-citation-id',
+      'data-citation-ids',
       'dataCitationId',
+      'dataCitationIds',
     ],
   },
 };
 
 const injectCitationSpans = (content: string) => {
   // 匹配多种引用格式: [ID:1], [ID: 2], [ID 3], [1] 等
-  return content.replace(/\[(?:ID\s*[: ]\s*)?(\d+)\]/g, (_match, id) => {
-    return `<span data-citation-id="${id}">[ID:${id}]</span>`;
+  const citationPattern = /\[(?:ID\s*[: ]\s*)?(\d+)\]/g;
+  const buildCitationSpan = (ids: string[]) => {
+    if (ids.length === 1) {
+      return `<span data-citation-id="${ids[0]}">引文来源</span>`;
+    }
+    return `<span data-citation-ids="${ids.join(',')}">引文来源</span>`;
+  };
+
+  const moved = content.replace(
+    /((?:\[(?:ID\s*[: ]\s*)?\d+\])+\s*)([。！？；，,.!?:;])/g,
+    (match, group, punctuation) => {
+      const ids = Array.from(group.matchAll(citationPattern), (item) => item[1]);
+      if (!ids.length) {
+        return match;
+      }
+      return `${punctuation} ${buildCitationSpan(ids)}`;
+    }
+  );
+
+  return moved.replace(/(?:\[(?:ID\s*[: ]\s*)?\d+\])+/g, (match) => {
+    const ids = Array.from(match.matchAll(citationPattern), (item) => item[1]);
+    if (!ids.length) {
+      return match;
+    }
+    return buildCitationSpan(ids);
   });
 };
 
@@ -270,6 +295,26 @@ const getSourceIcon = (source: ChatMessageSource) => {
     return 'IMG';
   }
   return 'DOC';
+};
+
+const formatSimilarity = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—';
+  }
+  return `${(value * 100).toFixed(2)}%`;
+};
+
+const resolveSourceByIndex = (sources: ChatMessageSource[], index: number) => {
+  if (!Number.isFinite(index)) {
+    return undefined;
+  }
+  if (sources[index]) {
+    return sources[index];
+  }
+  if (index > 0 && sources[index - 1]) {
+    return sources[index - 1];
+  }
+  return undefined;
 };
 
 const normalizePositions = (positions: unknown) => {
@@ -303,24 +348,30 @@ const buildReferenceDocs = (sources: ChatMessageSource[]) => {
 
 const ReferenceHoverCard = ({
   source,
-  index,
 }: {
   source?: ChatMessageSource;
   index: number;
 }) => {
-  const label = source ? formatSourceLabel(source) : `ID:${index}`;
+  const label = source ? formatSourceLabel(source) : `引用`;
   const link = source ? buildSourceLink(source) : '';
   const preview = source?.content?.trim();
   const docType = getSourceIcon(source || {});
 
   return (
-    <span className="group/citation relative inline-flex items-center">
-      <span className="cursor-pointer text-sky-600 hover:text-sky-700">[ID:{index}]</span>
+    <span className="group/citation relative inline-flex items-center mx-1.5">
+      <span className="cursor-pointer rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-600 hover:text-sky-700">
+        引文来源
+      </span>
       {source && (
         <div className="invisible absolute left-0 top-full z-50 mt-2 w-[420px] max-w-[70vw] rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700 shadow-xl opacity-0 transition-all duration-200 group-hover/citation:visible group-hover/citation:opacity-100">
           {preview && (
             <p className="max-h-40 overflow-auto leading-relaxed text-slate-700">{preview}</p>
           )}
+          <div className="mt-3 text-[11px] text-slate-500">
+            相似度: {formatSimilarity(source.similarity)}，语义相似度:{' '}
+            {formatSimilarity(source.vector_similarity)}，关键词相似度:{' '}
+            {formatSimilarity(source.term_similarity)}
+          </div>
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
               {docType}
@@ -342,6 +393,69 @@ const ReferenceHoverCard = ({
           </div>
         </div>
       )}
+    </span>
+  );
+};
+
+const ReferenceHoverGroup = ({
+  items,
+}: {
+  items: Array<{ index: number; source?: ChatMessageSource }>;
+}) => {
+  return (
+    <span className="group/citation relative inline-flex items-center mx-1.5">
+      <span className="cursor-pointer rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-600 hover:text-sky-700">
+        引文来源
+      </span>
+      <div className="invisible absolute left-0 top-full z-50 mt-2 w-[420px] max-w-[70vw] rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700 shadow-xl opacity-0 transition-all duration-200 group-hover/citation:visible group-hover/citation:opacity-100">
+        <div className="space-y-2">
+          {items.map((item) => {
+            const source = item.source;
+            const label = source ? formatSourceLabel(source) : `引用`;
+            const link = source ? buildSourceLink(source) : '';
+            const docType = getSourceIcon(source || {});
+            const preview = source?.content?.trim();
+            return (
+              <div
+                key={`${item.index}-${label}`}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+              >
+                {preview && (
+                  <p className="mb-1 max-h-24 overflow-auto leading-relaxed text-slate-700">
+                    {preview}
+                  </p>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                    {docType}
+                  </span>
+                  {link ? (
+                    <button
+                      type="button"
+                      className="truncate text-left text-xs font-medium text-slate-700 hover:text-sky-600"
+                      title={label}
+                      onClick={() => openDocumentLink(link, label)}
+                    >
+                      {label}
+                    </button>
+                  ) : (
+                    <span className="truncate text-xs font-medium text-slate-700" title={label}>
+                      {label}
+                    </span>
+                  )}
+                </div>
+                {source && (
+                  <div className="mt-1 text-[11px] text-slate-500">
+                    相似度: {formatSimilarity(source.similarity)}，语义相似度:{' '}
+                    {formatSimilarity(source.vector_similarity)}，关键词相似度:{' '}
+                    {formatSimilarity(source.term_similarity)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </span>
   );
 };
@@ -391,17 +505,30 @@ const MarkdownMessage = ({
   }
   const withCitations = injectCitationSpans(content);
   return (
-    <div className="text-sm md:text-base leading-snug text-slate-800 prose prose-slate prose-p:my-0.5 prose-headings:my-2 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-p:leading-6 prose-li:leading-6 max-w-none prose-span:font-normal prose-span:text-inherit">
+    <div className="text-sm md:text-base leading-snug text-slate-800 prose prose-slate prose-p:my-0 prose-headings:my-1 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-p:leading-5 prose-li:leading-5 prose-ol:pl-4 prose-ul:pl-4 prose-li:pl-0.5 max-w-none prose-span:font-normal prose-span:text-inherit [&_li>p]:inline [&_li>p]:m-0">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, citationSchema]]}
         components={{
           span: ({ node, children, ...props }) => {
             const castProps = props as Record<string, string>;
+            const citationIds = castProps['data-citation-ids'] || castProps.dataCitationIds;
+            if (citationIds) {
+              const indices = citationIds
+                .split(',')
+                .map((value) => Number(value))
+                .filter((value) => Number.isFinite(value));
+              const items = indices.map((index) => ({
+                index,
+                source: resolveSourceByIndex(sources, index),
+              }));
+              return <ReferenceHoverGroup items={items} />;
+            }
+
             const citationId = castProps['data-citation-id'] || castProps.dataCitationId;
             if (citationId) {
               const index = Number(citationId);
-              const source = sources[index - 1];
+              const source = resolveSourceByIndex(sources, index);
               // 如果没有对应的 source，仍然显示引用但没有悬浮效果
               return <ReferenceHoverCard source={source} index={index} />;
             }

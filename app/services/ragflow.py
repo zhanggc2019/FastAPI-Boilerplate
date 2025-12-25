@@ -68,6 +68,22 @@ class RagflowService:
             return data["session_id"]
         return None
 
+    @staticmethod
+    def _log_answer_reference(tag: str, answer: str, reference: Any) -> None:
+        if not answer and reference is None:
+            return
+        if answer:
+            logger.info(f"[RAGFlow] {tag} answer: {answer}")
+        if reference is None:
+            return
+        chunks = reference.get("chunks") if isinstance(reference, dict) else None
+        if chunks is not None:
+            logger.info(
+                f"[RAGFlow] {tag} reference.chunks: {json.dumps(chunks, ensure_ascii=False)}"
+            )
+        else:
+            logger.info(f"[RAGFlow] {tag} reference: {json.dumps(reference, ensure_ascii=False)}")
+
     def _build_payload(
         self,
         question: str | None,
@@ -256,6 +272,7 @@ class RagflowService:
                     logger.warning("[RAGFlow] no dataset_ids found for chat, cannot build reference fallback")
             except Exception as err:
                 logger.warning(f"[RAGFlow] fallback reference failed: {err}")
+        self._log_answer_reference("ask", answer, reference)
         return {"answer": answer, "session_id": session_id, "reference": reference, "raw": data}
 
     async def ask_stream(
@@ -295,6 +312,8 @@ class RagflowService:
                     line_count = 0
                     all_lines = []
                     saw_reference = False
+                    answer_parts: list[str] = []
+                    latest_reference: Any = None
                     try:
                         async for chunk in response.aiter_bytes():
                             if not chunk:
@@ -321,6 +340,34 @@ class RagflowService:
                                     data_str = line.replace("data:", "", 1).strip()
                                     try:
                                         payload_json = json.loads(data_str)
+                                        if isinstance(payload_json, dict):
+                                            answer_delta = ""
+                                            if isinstance(payload_json.get("answer"), str):
+                                                answer_delta = payload_json["answer"]
+                                            else:
+                                                data_obj = payload_json.get("data")
+                                                if isinstance(data_obj, dict) and isinstance(
+                                                    data_obj.get("answer"), str
+                                                ):
+                                                    answer_delta = data_obj["answer"]
+                                            if not answer_delta:
+                                                choices = payload_json.get("choices")
+                                                if isinstance(choices, list) and choices:
+                                                    choice = choices[0] if isinstance(choices[0], dict) else None
+                                                    if isinstance(choice, dict):
+                                                        delta = choice.get("delta")
+                                                        if isinstance(delta, dict) and isinstance(
+                                                            delta.get("content"), str
+                                                        ):
+                                                            answer_delta = delta["content"]
+                                                        else:
+                                                            message = choice.get("message")
+                                                            if isinstance(message, dict) and isinstance(
+                                                                message.get("content"), str
+                                                            ):
+                                                                answer_delta = message["content"]
+                                            if answer_delta:
+                                                answer_parts.append(answer_delta)
                                         reference = (
                                             payload_json.get("reference")
                                             or payload_json.get("data", {}).get("reference")
@@ -330,6 +377,7 @@ class RagflowService:
                                         )
                                         if reference:
                                             saw_reference = True
+                                            latest_reference = reference
                                     except json.JSONDecodeError:
                                         pass
 
@@ -360,11 +408,15 @@ class RagflowService:
                                     metadata_condition=extra_body.get("metadata_condition") if extra_body else None,
                                 )
                                 if reference:
+                                    latest_reference = reference
                                     yield f"data: {json.dumps({'reference': reference}, ensure_ascii=False)}\n\n"
                             else:
                                 logger.warning("[RAGFlow] no dataset_ids found for chat, cannot build reference fallback")
                         except Exception as err:
                             logger.warning(f"[RAGFlow] fallback reference failed: {err}")
+
+                    if answer_parts or latest_reference is not None:
+                        self._log_answer_reference("stream", "".join(answer_parts), latest_reference)
 
                     # 发送流结束标记
                     yield "data: [DONE]\n\n"
