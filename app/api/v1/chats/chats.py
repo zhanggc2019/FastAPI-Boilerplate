@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, status
 
 from app.core.factory import Factory
-from app.schemas.requests.chat import ChatConversationCreate, ChatMessageCreate
+from app.schemas.requests.chat import ChatConversationCreate, ChatConversationUpdate, ChatMessageCreate
 from app.schemas.responses.chat import ChatConversationResponse, ChatMessageResponse
 from app.services import ChatService
 
@@ -38,6 +38,21 @@ async def delete_conversation(
     chat_service: ChatService = Depends(Factory().get_chat_service),
 ) -> None:
     await chat_service.delete_conversation(UUID(conversation_uuid), request.user.uuid)
+
+
+@chat_router.patch("/{conversation_uuid}", response_model=ChatConversationResponse)
+async def update_conversation(
+    request: Request,
+    conversation_uuid: str,
+    payload: ChatConversationUpdate,
+    chat_service: ChatService = Depends(Factory().get_chat_service),
+) -> ChatConversationResponse:
+    conversation = await chat_service.update_conversation_title(
+        conversation_uuid=UUID(conversation_uuid),
+        user_uuid=request.user.uuid,
+        title=payload.title,
+    )
+    return ChatConversationResponse.model_validate(conversation)
 
 
 @chat_router.get("/{conversation_uuid}/messages", response_model=List[ChatMessageResponse])

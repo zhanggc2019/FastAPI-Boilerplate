@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
 import {
   Bot,
@@ -36,9 +40,11 @@ interface ConversationSummary {
 interface ChatMessageSource {
   id?: string | null;
   document_name?: string | null;
+  title?: string | null;
   document_id?: string | null;
   dataset_id?: string | null;
   url?: string | null;
+  download_url?: string | null;
   content?: string | null;
   positions?: string[] | number[][] | null;
   similarity?: number | null;
@@ -46,6 +52,13 @@ interface ChatMessageSource {
   term_similarity?: number | null;
   doc_type?: string | null;
   image_id?: string | null;
+}
+
+interface DocReferenceItem {
+  key: string;
+  name: string;
+  url?: string | null;
+  docType?: string | null;
 }
 
 const parseTimestamp = (value: string) => {
@@ -67,9 +80,9 @@ const formatTime = (value: string) =>
 
 const exampleQuestions = [
   '如何定义“双师型”教师？',
-  '企业导师参与教学有哪些要求？',
+  '教师队伍建设新形势有哪些?',
   '职业教育实训基地建设的核心指标是什么？',
-  '教师实践管理制度的关键要点？',
+  '素提计划实施的整体情况',
 ];
 
 const extractSources = (content: string) => {
@@ -112,9 +125,45 @@ const extractSources = (content: string) => {
   };
 };
 
+const buildSourceCacheKey = (source: ChatMessageSource) => {
+  if (source.dataset_id && source.document_id && source.id) {
+    return `${source.dataset_id}:${source.document_id}:${source.id}`;
+  }
+  return null;
+};
+
+const extractDocumentName = (chunk: any) =>
+  chunk?.document_name ||
+  chunk?.docnm_kwd ||
+  chunk?.doc_name ||
+  chunk?.doc?.name ||
+  chunk?.doc?.location ||
+  chunk?.document?.document_name ||
+  chunk?.document?.doc_name ||
+  chunk?.document?.name ||
+  chunk?.document?.title ||
+  chunk?.title ||
+  null;
+
+const extractDocumentUrl = (chunk: any) =>
+  chunk?.url ||
+  chunk?.download_url ||
+  chunk?.doc_url ||
+  chunk?.document_url ||
+  chunk?.document?.url ||
+  chunk?.document?.download_url ||
+  chunk?.document?.doc_url ||
+  chunk?.document?.document_url ||
+  chunk?.document?.download_url ||
+  chunk?.download_url ||
+  null;
+
 const buildSourceLink = (source: ChatMessageSource) => {
   if (source.url) {
     return source.url;
+  }
+  if (source.download_url) {
+    return source.download_url;
   }
   if (source.dataset_id && source.document_id && source.id) {
     return `/api/v1/assistant/chunks/${source.dataset_id}/${source.document_id}/${source.id}`;
@@ -122,7 +171,82 @@ const buildSourceLink = (source: ChatMessageSource) => {
   return '';
 };
 
+const normalizeApiPath = (link: string) => {
+  if (link.startsWith('/api/v1/')) {
+    return link.replace('/api/v1', '');
+  }
+  return link;
+};
+
+const getFilenameFromContentDisposition = (value?: string) => {
+  if (!value) {
+    return '';
+  }
+  const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const asciiMatch = value.match(/filename=\"?([^\";]+)\"?/i);
+  return asciiMatch?.[1] ?? '';
+};
+
+const openDocumentLink = async (link: string, name?: string) => {
+  if (!link) {
+    return;
+  }
+  if (!link.startsWith('/api/v1/')) {
+    window.open(link, '_blank');
+    return;
+  }
+  try {
+    const response = await api.get(normalizeApiPath(link), {
+      responseType: 'blob',
+    });
+    const blobUrl = URL.createObjectURL(response.data);
+    const filenameFromHeader = getFilenameFromContentDisposition(
+      response.headers?.['content-disposition']
+    );
+    const filename = filenameFromHeader || name || 'document';
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  } catch (err) {
+    console.error('打开文档失败', err);
+  }
+};
+
+const citationSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames || []), 'span'],
+  attributes: {
+    ...defaultSchema.attributes,
+    '*': [
+      ...(defaultSchema.attributes?.['*'] || []),
+      'data-citation-id',
+      'dataCitationId',
+    ],
+  },
+};
+
+const injectCitationSpans = (content: string) => {
+  // 匹配多种引用格式: [ID:1], [ID: 2], [ID 3], [1] 等
+  return content.replace(/\[(?:ID\s*[: ]\s*)?(\d+)\]/g, (_match, id) => {
+    return `<span data-citation-id="${id}">[ID:${id}]</span>`;
+  });
+};
+
 const formatSourceLabel = (source: ChatMessageSource) => {
+  if (source.title) {
+    return source.title;
+  }
   if (source.document_name) {
     return source.document_name;
   }
@@ -130,14 +254,6 @@ const formatSourceLabel = (source: ChatMessageSource) => {
     return source.content;
   }
   return '未知文档';
-};
-
-const formatSimilarity = (source: ChatMessageSource) => {
-  const similarity = source.similarity ?? source.vector_similarity;
-  if (typeof similarity === 'number') {
-    return `${(similarity * 100).toFixed(1)}%`;
-  }
-  return null;
 };
 
 const getSourceIcon = (source: ChatMessageSource) => {
@@ -156,63 +272,166 @@ const getSourceIcon = (source: ChatMessageSource) => {
   return 'DOC';
 };
 
-const renderContentWithCitations = (content: string, sources: ChatMessageSource[]) => {
-  if (!sources?.length) return content;
+const normalizePositions = (positions: unknown) => {
+  if (!Array.isArray(positions)) {
+    return undefined;
+  }
+  const flattened = positions.flatMap((item) => (Array.isArray(item) ? item : [item]));
+  const normalized = flattened.filter(
+    (item) => typeof item === 'number' || typeof item === 'string'
+  );
+  return normalized.length ? normalized : undefined;
+};
 
-  // 将 [1], [2] 等引文标记转换为可点击的链接
-  const citationRegex = /\[(\d+)\]/g;
-  const parts: Array<string | { type: 'citation'; index: number }> = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = citationRegex.exec(content)) !== null) {
-    // 添加匹配前的文本
-    if (match.index > lastIndex) {
-      parts.push(content.slice(lastIndex, match.index));
+const buildReferenceDocs = (sources: ChatMessageSource[]) => {
+  const map = new Map<string, DocReferenceItem>();
+  sources.forEach((source) => {
+    const label = formatSourceLabel(source);
+    const key = source.document_id || label;
+    if (!key || map.has(key)) {
+      return;
     }
-    // 添加引文
-    const index = parseInt(match[1], 10) - 1; // 转换为 0-based 索引
-    parts.push({ type: 'citation', index });
-    lastIndex = match.index + match[0].length;
-  }
+    map.set(key, {
+      key,
+      name: label,
+      url: source.url || source.download_url || null,
+      docType: source.doc_type || null,
+    });
+  });
+  return Array.from(map.values());
+};
 
-  // 添加剩余文本
-  if (lastIndex < content.length) {
-    parts.push(content.slice(lastIndex));
-  }
+const ReferenceHoverCard = ({
+  source,
+  index,
+}: {
+  source?: ChatMessageSource;
+  index: number;
+}) => {
+  const label = source ? formatSourceLabel(source) : `ID:${index}`;
+  const link = source ? buildSourceLink(source) : '';
+  const preview = source?.content?.trim();
+  const docType = getSourceIcon(source || {});
 
   return (
-    <>
-      {parts.map((part, i) => {
-        if (typeof part === 'string') {
-          return <span key={`text-${i}-${part.slice(0, 10)}`}>{part}</span>;
-        }
-        const source = sources[part.index];
-        const link = source ? buildSourceLink(source) : '';
-        return (
-          <sup key={`citation-${part.index}`} className="ml-0.5">
+    <span className="group/citation relative inline-flex items-center">
+      <span className="cursor-pointer text-sky-600 hover:text-sky-700">[ID:{index}]</span>
+      {source && (
+        <div className="invisible absolute left-0 top-full z-50 mt-2 w-[420px] max-w-[70vw] rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700 shadow-xl opacity-0 transition-all duration-200 group-hover/citation:visible group-hover/citation:opacity-100">
+          {preview && (
+            <p className="max-h-40 overflow-auto leading-relaxed text-slate-700">{preview}</p>
+          )}
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+              {docType}
+            </span>
             {link ? (
-              <a
-                href={link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-sky-50 text-sky-500 text-[8px] font-medium hover:bg-sky-100 hover:text-sky-600 transition no-underline border border-sky-200"
-                title={source ? formatSourceLabel(source) : `来源 ${part.index + 1}`}
+              <button
+                type="button"
+                className="truncate text-left text-xs font-medium text-slate-700 hover:text-sky-600"
+                title={label}
+                onClick={() => openDocumentLink(link, label)}
               >
-                {part.index + 1}
-              </a>
+                {label}
+              </button>
             ) : (
-              <span
-                className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-50 text-slate-400 text-[8px] font-medium border border-slate-200"
-                title={`来源 ${part.index + 1}`}
-              >
-                {part.index + 1}
+              <span className="truncate text-xs font-medium text-slate-700" title={label}>
+                {label}
               </span>
             )}
-          </sup>
-        );
-      })}
-    </>
+          </div>
+        </div>
+      )}
+    </span>
+  );
+};
+
+const ChatReferenceDocumentList = ({ sources }: { sources: ChatMessageSource[] }) => {
+  const docs = useMemo(() => buildReferenceDocs(sources), [sources]);
+  if (!docs.length) return null;
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {docs.map((doc) => (
+        <div
+          key={doc.key}
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+        >
+          <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+            {getSourceIcon({ doc_type: doc.docType || undefined, document_name: doc.name })}
+          </span>
+          {doc.url ? (
+            <button
+              type="button"
+              className="max-w-[260px] truncate text-left font-medium text-slate-800 hover:text-sky-600"
+              title={doc.name}
+              onClick={() => openDocumentLink(doc.url ?? '', doc.name)}
+            >
+              {doc.name}
+            </button>
+          ) : (
+            <span className="max-w-[260px] truncate font-medium text-slate-800" title={doc.name}>
+              {doc.name}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MarkdownMessage = ({
+  content,
+  sources,
+}: {
+  content: string;
+  sources: ChatMessageSource[];
+}) => {
+  if (!content) {
+    return null;
+  }
+  const withCitations = injectCitationSpans(content);
+  return (
+    <div className="text-sm md:text-base leading-snug text-slate-800 prose prose-slate prose-p:my-0.5 prose-headings:my-2 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:my-0 prose-p:leading-6 prose-li:leading-6 max-w-none prose-span:font-normal prose-span:text-inherit">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, citationSchema]]}
+        components={{
+          span: ({ node, children, ...props }) => {
+            const castProps = props as Record<string, string>;
+            const citationId = castProps['data-citation-id'] || castProps.dataCitationId;
+            if (citationId) {
+              const index = Number(citationId);
+              const source = sources[index - 1];
+              // 如果没有对应的 source，仍然显示引用但没有悬浮效果
+              return <ReferenceHoverCard source={source} index={index} />;
+            }
+            return <span>{children}</span>;
+          },
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-600 hover:text-sky-700 underline underline-offset-2"
+            >
+              {children}
+            </a>
+          ),
+          h1: ({ children }) => <h1 className="text-lg font-semibold">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-base font-semibold">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-base font-semibold">{children}</h3>,
+          ul: ({ children }) => <ul className="list-disc pl-5 space-y-0.5">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-5 space-y-0.5">{children}</ol>,
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-slate-200 pl-3 text-slate-600 my-1">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {withCitations}
+      </ReactMarkdown>
+    </div>
   );
 };
 
@@ -235,6 +454,8 @@ export default function Chatbot() {
   const [error, setError] = useState('');
   const [userLabel, setUserLabel] = useState('');
   const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const sourceCacheRef = useRef<Map<string, ChatMessageSource>>(new Map());
+  const renamedConversationsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -259,6 +480,72 @@ export default function Chatbot() {
     }
   };
 
+  const hydrateSource = async (source: ChatMessageSource) => {
+    const cacheKey = buildSourceCacheKey(source);
+    if (!cacheKey) {
+      return source;
+    }
+
+    const cached = sourceCacheRef.current.get(cacheKey);
+    if (cached && (cached.document_name || cached.title || cached.url || cached.download_url || cached.doc_type)) {
+      return {
+        ...source,
+        document_name: source.document_name || cached.document_name,
+        title: source.title || cached.title,
+        url: source.url || cached.url,
+        download_url: source.download_url || cached.download_url,
+        doc_type: source.doc_type || cached.doc_type,
+      };
+    }
+
+    if (source.document_name && (source.url || source.download_url)) {
+      sourceCacheRef.current.set(cacheKey, {
+        document_name: source.document_name,
+        title: source.title,
+        url: source.url,
+        download_url: source.download_url,
+        doc_type: source.doc_type,
+      });
+      return source;
+    }
+
+    try {
+      const response = await api.get(`/assistant/chunks/${source.dataset_id}/${source.document_id}/${source.id}`);
+      const chunk = response.data;
+      const documentName = extractDocumentName(chunk);
+      const documentTitle = chunk?.title || chunk?.document?.title || null;
+      const documentUrl = extractDocumentUrl(chunk);
+      const downloadUrl = chunk?.download_url || chunk?.document?.download_url || null;
+      const docType = chunk?.doc_type || source.doc_type || null;
+      const merged: ChatMessageSource = {
+        ...source,
+        document_name: source.document_name || documentName || undefined,
+        title: source.title || documentTitle || undefined,
+        url: source.url || documentUrl || undefined,
+        download_url: source.download_url || downloadUrl || undefined,
+        doc_type: docType || undefined,
+      };
+      sourceCacheRef.current.set(cacheKey, {
+        document_name: merged.document_name,
+        title: merged.title,
+        url: merged.url,
+        download_url: merged.download_url,
+        doc_type: merged.doc_type,
+      });
+      return merged;
+    } catch (fetchError) {
+      console.warn('获取来源详情失败', fetchError);
+      return source;
+    }
+  };
+
+  const hydrateSources = async (sources: ChatMessageSource[]) => {
+    if (!sources.length) {
+      return sources;
+    }
+    return Promise.all(sources.map((source) => hydrateSource(source)));
+  };
+
   const fetchMessages = async (conversationId: string) => {
     if (!conversationId) {
       setMessages([]);
@@ -273,15 +560,23 @@ export default function Chatbot() {
         created_at: string;
         sources?: ChatMessageSource[] | null;
       }>;
-      setMessages(
-        items.map((item) => ({
-          id: item.uuid,
-          role: item.role,
-          content: item.content,
-          createdAt: item.created_at,
-          sources: item.sources || undefined,
-        }))
+      const normalized = items.map((item) => ({
+        id: item.uuid,
+        role: item.role,
+        content: item.content,
+        createdAt: item.created_at,
+        sources: item.sources || undefined,
+      }));
+      const hydrated = await Promise.all(
+        normalized.map(async (item) => {
+          if (!item.sources?.length) {
+            return item;
+          }
+          const sources = await hydrateSources(item.sources);
+          return { ...item, sources };
+        })
       );
+      setMessages(hydrated);
     } catch (err) {
       console.error(err);
       setError('加载消息失败');
@@ -349,6 +644,44 @@ export default function Chatbot() {
     }
   };
 
+  const deriveConversationTitle = (content: string) => {
+    const cleaned = content.replace(/\s+/g, ' ').trim();
+    if (!cleaned) {
+      return '';
+    }
+    const limit = 32;
+    if (cleaned.length <= limit) {
+      return cleaned;
+    }
+    return `${cleaned.slice(0, limit)}…`;
+  };
+
+  const maybeRenameConversation = async (conversationId: string, content: string) => {
+    if (renamedConversationsRef.current.has(conversationId)) {
+      return;
+    }
+    const currentTitle =
+      conversations.find((item) => item.uuid === conversationId)?.title ?? '新会话';
+    if (currentTitle !== '新会话') {
+      renamedConversationsRef.current.add(conversationId);
+      return;
+    }
+    const nextTitle = deriveConversationTitle(content);
+    if (!nextTitle) {
+      return;
+    }
+    try {
+      const response = await api.patch(`/chats/${conversationId}`, { title: nextTitle });
+      const updated = response.data as ConversationSummary;
+      renamedConversationsRef.current.add(conversationId);
+      setConversations((prev) =>
+        prev.map((item) => (item.uuid === conversationId ? { ...item, title: updated.title } : item))
+      );
+    } catch (err) {
+      console.error('更新会话标题失败', err);
+    }
+  };
+
   const updateAssistantMessage = (messageId: string, append: string) => {
     setMessages((prev) =>
       prev.map((message) =>
@@ -357,9 +690,16 @@ export default function Chatbot() {
     );
   };
 
+  const updateMessageSources = (messageId: string, sources: ChatMessageSource[]) => {
+    setMessages((prev) =>
+      prev.map((message) => (message.id === messageId ? { ...message, sources } : message))
+    );
+  };
+
   const extractContent = (payload: any) =>
     payload?.choices?.[0]?.message?.content ||
     payload?.choices?.[0]?.delta?.content ||
+    payload?.data?.answer ||
     payload?.answer ||
     '';
 
@@ -369,8 +709,9 @@ export default function Chatbot() {
       payload?.data?.reference ||
       payload?.choices?.[0]?.message?.reference ||
       payload?.choices?.[0]?.delta?.reference;
-    const docAggs = reference?.doc_aggs;
+
     const docNameById = new Map<string, string>();
+    const docAggs = reference?.doc_aggs;
     if (Array.isArray(docAggs)) {
       docAggs.forEach((item: any) => {
         if (item?.doc_id && item?.doc_name) {
@@ -384,40 +725,42 @@ export default function Chatbot() {
         }
       });
     }
-    const chunks = reference?.chunks;
-    if (Array.isArray(chunks)) {
-      return chunks.map((chunk: any) => ({
-        id: chunk.id,
-        document_name: chunk.document_name || docNameById.get(chunk.document_id),
-        document_id: chunk.document_id,
-        dataset_id: chunk.dataset_id,
-        url: chunk.url,
-        content: chunk.content,
-        positions: Array.isArray(chunk.positions) ? chunk.positions : undefined,
+
+    const rawChunks = Array.isArray(reference)
+      ? reference
+      : Array.isArray(reference?.chunks)
+        ? reference?.chunks
+        : reference?.chunks && typeof reference?.chunks === 'object'
+          ? Object.values(reference.chunks)
+          : [];
+
+    if (!rawChunks?.length) {
+      return [];
+    }
+
+    return rawChunks.map((chunk: any) => {
+      const documentId = chunk.document_id || chunk.doc_id;
+      return {
+        id: chunk.id || chunk.chunk_id,
+        document_name:
+          chunk.document_name ||
+          chunk.docnm_kwd ||
+          chunk.doc_name ||
+          docNameById.get(documentId),
+        title: chunk.title,
+        document_id: documentId,
+        dataset_id: chunk.dataset_id || chunk.kb_id,
+        url: chunk.url || chunk.doc_url,
+        download_url: chunk.download_url,
+        content: chunk.content || chunk.content_with_weight,
+        positions: normalizePositions(chunk.positions || chunk.position_int),
         similarity: chunk.similarity,
         vector_similarity: chunk.vector_similarity,
         term_similarity: chunk.term_similarity,
-        doc_type: chunk.doc_type,
-        image_id: chunk.image_id,
-      }));
-    }
-    if (chunks && typeof chunks === 'object') {
-      return Object.values(chunks).map((chunk: any) => ({
-        id: chunk.id,
-        document_name: chunk.document_name || docNameById.get(chunk.document_id),
-        document_id: chunk.document_id,
-        dataset_id: chunk.dataset_id,
-        url: chunk.url,
-        content: chunk.content,
-        positions: Array.isArray(chunk.positions) ? chunk.positions : undefined,
-        similarity: chunk.similarity,
-        vector_similarity: chunk.vector_similarity,
-        term_similarity: chunk.term_similarity,
-        doc_type: chunk.doc_type,
-        image_id: chunk.image_id,
-      }));
-    }
-    return [];
+        doc_type: chunk.doc_type || chunk.doc_type_kwd,
+        image_id: chunk.image_id || chunk.img_id,
+      };
+    });
   };
 
   const sendMessage = async () => {
@@ -460,6 +803,7 @@ export default function Chatbot() {
         role: 'user',
         content: userMessage.content,
       });
+      void maybeRenameConversation(conversationId, userMessage.content);
 
       const token = localStorage.getItem('token');
       const payload = {
@@ -485,58 +829,74 @@ export default function Chatbot() {
         throw new Error(errText || '请求失败');
       }
 
-      const contentType = response.headers.get('content-type') || '';
-      if (isStreaming && response.body && contentType.includes('text/event-stream')) {
+      // 使用流式处理，无论 Content-Type 如何，只要 isStreaming=true 且 response.body 存在
+      if (isStreaming && response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         let assistantContent = '';
         let assistantSources: ChatMessageSource[] = [];
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data:')) {
-              continue;
-            }
-            const data = trimmed.replace(/^data:\s*/, '');
-            if (data === '[DONE]') {
-              break;
-            }
-            try {
-              const parsed = JSON.parse(data);
-              const delta = extractContent(parsed);
-              if (delta) {
-                assistantContent += delta;
-                updateAssistantMessage(assistantMessage.id, delta);
+
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) {
+                continue;
               }
-              const references = extractReferences(parsed);
-              if (references.length) {
-                assistantSources = references;
-                setMessages((prev) =>
-                  prev.map((message) =>
-                    message.id === assistantMessage.id ? { ...message, sources: references } : message
-                  )
-                );
+              if (!trimmed.startsWith('data:')) {
+                continue;
               }
-            } catch {
-              continue;
+
+              const data = trimmed.replace(/^data:\s*/, '');
+              if (data === '[DONE]') {
+                break;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+
+                const delta = extractContent(parsed);
+                if (delta) {
+                  assistantContent += delta;
+                  updateAssistantMessage(assistantMessage.id, delta);
+                }
+
+                const references = extractReferences(parsed);
+                if (references.length) {
+                  assistantSources = references;
+                  updateMessageSources(assistantMessage.id, references);
+                  void (async () => {
+                    const hydrated = await hydrateSources(references);
+                    assistantSources = hydrated;
+                    updateMessageSources(assistantMessage.id, hydrated);
+                  })();
+                }
+              } catch {
+                continue;
+              }
             }
           }
+        } finally {
+          reader.releaseLock();
         }
+        const finalSources = assistantSources.length ? await hydrateSources(assistantSources) : undefined;
         await api.post(`/chats/${conversationId}/messages`, {
           role: 'assistant',
           content: assistantContent || '暂未获取到回答',
-          sources: assistantSources.length ? assistantSources : undefined,
+          sources: finalSources?.length ? finalSources : undefined,
         });
       } else {
         const payloadJson = await response.json();
         const answer = extractContent(payloadJson);
-        const references = extractReferences(payloadJson);
+        const references = await hydrateSources(extractReferences(payloadJson));
         updateAssistantMessage(assistantMessage.id, answer || '暂未获取到回答');
         setMessages((prev) =>
           prev.map((message) =>
@@ -704,10 +1064,10 @@ export default function Chatbot() {
                       )}
                       {message.role === 'user' ? 'You' : 'Assistant'}
                     </div>
-                    <p className="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-800">
+                    <div className="whitespace-pre-wrap">
                       {(() => {
                         if (message.role !== 'assistant') {
-                          return message.content || '';
+                          return <MarkdownMessage content={message.content || ''} sources={[]} />;
                         }
                         const displaySources = message.sources?.length
                           ? message.sources
@@ -715,78 +1075,20 @@ export default function Chatbot() {
                         const contentToDisplay = message.sources?.length
                           ? message.content
                           : extractSources(message.content).mainText;
-                        // 如果有来源数据，使用带引文链接的渲染
-                        if (displaySources.length > 0) {
-                          return renderContentWithCitations(contentToDisplay || (isSending ? '思考中…' : ''), displaySources);
-                        }
-                        return contentToDisplay || (isSending ? '思考中…' : '');
+                        return (
+                          <MarkdownMessage
+                            content={contentToDisplay || (isSending ? '正在检索知识库...' : '')}
+                            sources={displaySources}
+                          />
+                        );
                       })()}
-                    </p>
+                    </div>
                     {message.role === 'assistant' && (() => {
                       const sources = message.sources?.length
                         ? message.sources
                         : extractSources(message.content).sources.map((item) => ({ content: item }) as ChatMessageSource);
                       if (!sources.length) return null;
-                      return (
-                        <div className="mt-4 rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-indigo-50/80 px-4 py-3">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center">
-                                <span className="text-[10px] font-semibold text-white">[{sources.length}]</span>
-                              </div>
-                              <p className="uppercase tracking-[0.22em] text-[11px] font-semibold text-sky-700">参考来源</p>
-                            </div>
-                          </div>
-                          <ul className="space-y-2">
-                            {sources.map((source, index) => {
-                              const similarity = formatSimilarity(source);
-                              const docType = getSourceIcon(source);
-                              const link = buildSourceLink(source);
-                              return (
-                                <li key={`${source.id || source.document_name || source.content || index}`}>
-                                  <div className="group flex items-start gap-2 rounded-xl border border-sky-100 bg-white/60 px-3 py-2 hover:border-sky-300 hover:bg-white hover:shadow-sm transition">
-                                    <span className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-[10px] font-semibold text-white shadow-sm">
-                                      {index + 1}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-1.5 mb-1">
-                                        <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600">
-                                          {docType}
-                                        </span>
-                                        <span className="truncate text-xs font-medium text-slate-800">
-                                          {formatSourceLabel(source)}
-                                        </span>
-                                      </div>
-                                      {source.content && source.content.length > 0 && (
-                                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
-                                          {source.content}
-                                        </p>
-                                      )}
-                                      {link && (
-                                        <a
-                                          href={link}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-sky-600 hover:text-sky-700 font-medium underline underline-offset-2"
-                                        >
-                                          查看原文
-                                        </a>
-                                      )}
-                                    </div>
-                                    {similarity && (
-                                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
-                                          {similarity}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      );
+                      return <ChatReferenceDocumentList sources={sources} />;
                     })()}
                     <p className="text-[11px] text-slate-500 mt-3">{formatTime(message.createdAt)}</p>
                   </div>

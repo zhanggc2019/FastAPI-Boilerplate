@@ -135,6 +135,7 @@ class Config(BaseSettings):
     DATABASE_POOL_RECYCLE: int = Field(default=3600, validation_alias="DATABASE_POOL_RECYCLE")
     DATABASE_POOL_PRE_PING: bool = Field(default=True, validation_alias="DATABASE_POOL_PRE_PING")
     DATABASE_POOL_USE_LIFO: bool = Field(default=False, validation_alias="DATABASE_POOL_USE_LIFO")
+    DATABASE_INIT_TIMEOUT: int = Field(default=15, validation_alias="DATABASE_INIT_TIMEOUT")
 
     @property
     def database_pool_config(self) -> dict:
@@ -195,7 +196,10 @@ class Config(BaseSettings):
     RAGFLOW_API_KEY: str = Field(default="", validation_alias="RAGFLOW_API_KEY")
     RAGFLOW_API_KEY_HEADER: str = Field(default="Authorization", validation_alias="RAGFLOW_API_KEY_HEADER")
     RAGFLOW_API_KEY_PREFIX: str = Field(default="Bearer", validation_alias="RAGFLOW_API_KEY_PREFIX")
-    RAGFLOW_CHAT_PATH: str = Field(default="/api/v1/chats/{chat_id}/completions", validation_alias="RAGFLOW_CHAT_PATH")
+    RAGFLOW_CHAT_PATH: str = Field(
+        default="/api/v1/chats_openai/{chat_id}/chat/completions",
+        validation_alias="RAGFLOW_CHAT_PATH",
+    )
     RAGFLOW_CHAT_ID: str = Field(default="", validation_alias="RAGFLOW_CHAT_ID")
     RAGFLOW_TIMEOUT: int = Field(default=30, validation_alias="RAGFLOW_TIMEOUT")
 

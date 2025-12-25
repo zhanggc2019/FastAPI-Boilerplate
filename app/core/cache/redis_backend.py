@@ -28,19 +28,22 @@ class RedisBackend(BaseBackend):
             decode_responses=True,  # 转码 utf-8
         )
 
-    async def open(self) -> None:
-        """触发初始化连接"""
+    async def open(self) -> bool:
+        """触发初始化连接; 返回是否连接成功"""
         try:
             await self.redis.ping()
+            return True
         except TimeoutError:
             logger.error("❌ 数据库 redis 连接超时")
-            sys.exit()
         except AuthenticationError:
             logger.error("❌ 数据库 redis 连接认证失败")
-            sys.exit()
         except Exception as e:
             logger.error("❌ 数据库 redis 连接异常 {}", e)
+
+        if str(settings.ENVIRONMENT).lower() == "production":
             sys.exit()
+        logger.warning("⚠️ Redis 不可用，应用将继续启动（development/test）")
+        return False
 
     async def aclose(self) -> None:
         """关闭 Redis 连接"""

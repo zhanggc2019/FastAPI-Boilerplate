@@ -151,36 +151,51 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         if path_params:
             args["path_params"] = await self.desensitization(path_params)
 
-        # Tip: .body() 必须在 .form() 之前获取
-        # https://github.com/encode/starlette/discussions/1933
-        content_type = request.headers.get("Content-Type", "").split(";")
-
-        # 请求体
-        body_data = await request.body()
-        if body_data:
-            # 注意：非 json 数据默认使用 data 作为键
-            if "application/json" not in content_type:
-                args["data"] = str(body_data)
-            else:
-                json_data = await request.json()
-                if isinstance(json_data, dict):
-                    args["json"] = await self.desensitization(json_data)
-                else:
-                    args["data"] = str(body_data)
-
-        # 表单参数（仅对POST/PUT/PATCH/DELETE请求处理）
-        if request.method not in ["GET", "HEAD", "OPTIONS"]:
+        # 请求体处理 - 只读取一次，避免消耗请求体流
+        if request.method in ["POST", "PUT", "PATCH", "DELETE"]:
             try:
-                form_data = await request.form()
-                if len(form_data) > 0:
-                    for k, v in form_data.items():
-                        form_data = {k: v.filename} if isinstance(v, UploadFile) else {k: v}
-                    if "multipart/form-data" not in content_type:
-                        args["x-www-form-urlencoded"] = await self.desensitization(form_data)
-                    else:
-                        args["form-data"] = await self.desensitization(form_data)
+                content_type = request.headers.get("Content-Type", "")
+
+                if "application/json" in content_type:
+                    # JSON 请求：直接调用 json()，不要先调用 body()
+                    try:
+                        json_data = await request.json()
+                        if isinstance(json_data, dict):
+                            args["json"] = await self.desensitization(json_data)
+                        else:
+                            args["data"] = str(json_data)
+                    except Exception:
+                        # JSON 解析失败，跳过
+                        pass
+                elif "multipart/form-data" in content_type:
+                    # 表单数据
+                    try:
+                        form_data = await request.form()
+                        if len(form_data) > 0:
+                            processed_form = {}
+                            for k, v in form_data.items():
+                                processed_form[k] = v.filename if isinstance(v, UploadFile) else v
+                            args["form-data"] = await self.desensitization(processed_form)
+                    except Exception:
+                        pass
+                elif "application/x-www-form-urlencoded" in content_type:
+                    # URL 编码表单
+                    try:
+                        form_data = await request.form()
+                        if len(form_data) > 0:
+                            args["x-www-form-urlencoded"] = await self.desensitization(dict(form_data))
+                    except Exception:
+                        pass
+                else:
+                    # 其他类型：读取原始 body
+                    try:
+                        body_data = await request.body()
+                        if body_data:
+                            args["data"] = str(body_data)
+                    except Exception:
+                        pass
             except Exception:
-                # 如果表单解析失败，跳过表单数据处理
+                # 如果请求体解析失败，跳过处理，不影响正常请求
                 pass
 
         return args or None
@@ -204,16 +219,17 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     async def consumer(cls) -> None:
         """操作日志消费者"""
         while True:
-            logs = await batch_dequeue(
-                cls.opera_log_queue,
-                max_items=100,
-                timeout=60,
-            )
-            if logs:
-                try:
-                    # todo 存入数据库
-                    print("模拟存入:", logs)
-                    # await opera_log_service.bulk_create(objs=logs)
-                finally:
-                    if not cls.opera_log_queue.empty():
-                        cls.opera_log_queue.task_done()
+            # logs = await batch_dequeue(
+            #     cls.opera_log_queue,
+            #     max_items=100,
+            #     timeout=60,
+            # )
+            pass
+            # if logs:
+            #     try:
+            #         # todo 存入数据库
+            #         print("模拟存入:", logs)
+            #         # await opera_log_service.bulk_create(objs=logs)
+            #     finally:
+            #         if not cls.opera_log_queue.empty():
+            #             cls.opera_log_queue.task_done()

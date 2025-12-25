@@ -6,7 +6,7 @@ import { defineConfig, loadEnv } from 'vite'
 export default defineConfig(({ mode }) => {
   // 加载环境变量
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:8001'
 
   return {
     plugins: [react()],

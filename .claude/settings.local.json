@@ -9,7 +9,14 @@
       "Bash(uv sync:*)",
       "Bash(uv add:*)",
       "Bash(find:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(nohup.out)",
+      "Bash(tail:*)",
+      "Bash(docker-compose config:*)",
+      "Bash(npm run build:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []

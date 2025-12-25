@@ -38,6 +38,17 @@ class ChatService(BaseService[ChatConversation]):
             raise ResourceNotFoundException("Conversation not found")
         return conversation
 
+    @Transactional(propagation=Propagation.REQUIRED)
+    async def update_conversation_title(
+        self,
+        conversation_uuid: UUID,
+        user_uuid: UUID,
+        title: str,
+    ) -> ChatConversation:
+        conversation = await self.get_conversation(conversation_uuid, user_uuid)
+        conversation.title = title.strip()
+        return conversation
+
     async def list_messages(self, conversation_uuid: UUID, user_uuid: UUID) -> list[ChatMessage]:
         await self.get_conversation(conversation_uuid, user_uuid)
         return await self.message_repository.list_by_conversation(conversation_uuid)

@@ -1,4 +1,4 @@
-from asyncio import create_task
+from asyncio import create_task, wait_for, TimeoutError
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -14,7 +14,7 @@ from app.core.cache import Cache, CustomKeyMaker, RedisBackend
 from app.core.cache.redis_backend import redis_backend
 from app.core.config import config as settings
 from app.core.exceptions import CustomException, create_exception_handlers
-from app.core.logging import set_custom_logfile, setup_logging
+from app.core.logging import logger, set_custom_logfile, setup_logging
 from app.core.utils.health_check import ensure_unique_route_names, http_limit_callback
 
 
@@ -29,30 +29,39 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     # 创建数据库表
     from app.db.init_db import create_tables
     try:
-        await create_tables()
+        await wait_for(create_tables(), timeout=settings.DATABASE_INIT_TIMEOUT)
         print("数据库表创建成功")
+    except TimeoutError:
+        print("创建数据库表超时")
+        if str(settings.ENVIRONMENT).lower() == "production":
+            raise
     except Exception as e:
         print(f"创建数据库表时出错: {e}")
+        if str(settings.ENVIRONMENT).lower() == "production":
+            raise
 
     # 初始化 redis
-    await redis_backend.open()
+    redis_ok = await redis_backend.open()
 
-    # 初始化缓存
-    Cache.init(backend=RedisBackend, key_maker=CustomKeyMaker)
+    if redis_ok:
+        # 初始化缓存
+        Cache.init(backend=RedisBackend, key_maker=CustomKeyMaker)
 
-    # 初始化 limiter（暂时禁用）
-    try:
-        await FastAPILimiter.init(
-            redis=redis_backend.redis,
-            prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
-            http_callback=http_limit_callback,
-        )
-        print("FastAPI Limiter 初始化成功")
-    except Exception as e:
-        print(f"FastAPI Limiter 初始化失败: {e}")
+        # 初始化 limiter（暂时禁用）
+        try:
+            await FastAPILimiter.init(
+                redis=redis_backend.redis,
+                prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
+                http_callback=http_limit_callback,
+            )
+            print("FastAPI Limiter 初始化成功")
+        except Exception as e:
+            print(f"FastAPI Limiter 初始化失败: {e}")
+    else:
+        print("⚠️ Redis 不可用，跳过缓存和限流初始化")
 
     # 创建操作日志任务
-    create_task(OperaLogMiddleware.consumer())
+    # create_task(OperaLogMiddleware.consumer())
 
     yield
 
@@ -121,6 +130,7 @@ def register_logger() -> None:
     """注册日志"""
     setup_logging()
     set_custom_logfile()
+    logger.info(f"后端地址:{settings.SERVER_HOST}, 端口: {settings.SERVER_PORT}" )
 
 
 def register_static_file(app: FastAPI) -> None:
@@ -207,4 +217,3 @@ def register_router(app: FastAPI) -> None:
     app.include_router(router, prefix="/api")
     # Extra
     ensure_unique_route_names(app)
-

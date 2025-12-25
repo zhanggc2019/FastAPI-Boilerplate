@@ -7,12 +7,18 @@ class ChatConversationCreate(BaseModel):
     title: str | None = Field(default=None, max_length=255, description="Conversation title")
 
 
+class ChatConversationUpdate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255, description="Conversation title")
+
+
 class ChatMessageSource(BaseModel):
     id: str | None = None
     document_name: str | None = None
+    title: str | None = None
     document_id: str | None = None
     dataset_id: str | None = None
     url: str | None = None
+    download_url: str | None = None
     content: str | None = None
     positions: list[str] | list[int] | None = None
     similarity: float | None = None

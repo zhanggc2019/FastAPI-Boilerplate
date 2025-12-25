@@ -1,3 +1,6 @@
+import re
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
@@ -7,6 +10,13 @@ from app.schemas.responses.ragflow import RagflowAskResponse
 from app.services import RagflowService
 
 ragflow_router = APIRouter()
+
+
+def build_content_disposition(filename: str) -> str:
+    ascii_name = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("_") or "document"
+    if filename.isascii():
+        return f'attachment; filename="{filename}"'
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
 
 
 @ragflow_router.post("/ask", response_model=RagflowAskResponse)
@@ -45,3 +55,16 @@ async def get_chunk_detail(
     ragflow_service: RagflowService = Depends(Factory().get_ragflow_service),
 ):
     return await ragflow_service.get_chunk(dataset_id=dataset_id, document_id=document_id, chunk_id=chunk_id)
+
+
+@ragflow_router.get("/documents/{dataset_id}/{document_id}/download")
+async def download_document(
+    dataset_id: str,
+    document_id: str,
+    ragflow_service: RagflowService = Depends(Factory().get_ragflow_service),
+):
+    document = await ragflow_service.get_document(dataset_id=dataset_id, document_id=document_id)
+    filename = (document.get("document_name") if isinstance(document, dict) else None) or "document"
+    stream = ragflow_service.download_document_stream(dataset_id=dataset_id, document_id=document_id)
+    headers = {"Content-Disposition": build_content_disposition(filename)}
+    return StreamingResponse(stream, media_type="application/octet-stream", headers=headers)
